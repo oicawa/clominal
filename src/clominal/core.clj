@@ -1,5 +1,9 @@
-(ns clominal.core (:gen-class))
+(ns clominal.core
+  (:require [clominal.gui.MainFrame])
+  (:import (javax.swing UIManager))
+  (:gen-class))
 
 (defn -main [& args]
-      (println "Welcome to clominal world!")
-      (println "There are your arguments: " args))
+  (System/setProperty "awt.useSystemAAFontSettings" "on")
+  (UIManager/setLookAndFeel "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
+  (. (clominal.gui.MainFrame/create) setVisible true))
