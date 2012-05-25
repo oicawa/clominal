@@ -10,3 +10,4 @@
       (println evt)
       (.. evt getSource (addTab "追加新規テキスト" (JEditorPane.)))
       )))
+

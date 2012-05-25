@@ -5,62 +5,50 @@
   (:import (javax.swing JComponent JTabbedPane JPanel JEditorPane KeyStroke AbstractAction)
            (java.awt.event InputEvent KeyEvent)))
 
+;; ------------------------------
+;; TabbedPane
 (defvar *tabs* (doto (JTabbedPane.)
                  (.setTabPlacement JTabbedPane/TOP)
                  (.setTabLayoutPolicy JTabbedPane/SCROLL_TAB_LAYOUT)))
 
-(defn- add-key-bind
-  "Add key bind action to this main frame."
-  [keys get-action-proc]
-  (let [inputmap  (. *tabs* getInputMap JComponent/WHEN_IN_FOCUSED_WINDOW)
-        actionmap (. *tabs* getActionMap)
-        name      (:name (meta get-action-proc))]
-    (doto actionmap
-      (.put name (get-action-proc)))
-    (doto inputmap
-      (.put (KeyStroke/getKeyStroke keys) name))))
 
-(defn- create-action
-  "Create new tab action."
-  [proc]
-  (proxy [AbstractAction] []
-    (actionPerformed [evt]
-      (proc (. evt getSource)))))
-
-(defn add
-  "Add new tab."
-  []
-  (create-action (fn [tabs]
-                   (println "called add-tab.")
-                   (println tabs)
-                   (let [editor (editor/create)]
-                     (. tabs addTab editor/new-title editor)
-                     (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
-                     (. editor requestFocusInWindow)))))
-
-(defn remove-current
-  "Remove current selected tab."
-  []
-  (create-action (fn [tabs]
-                   (println "called remove-tab.")
-                   (let [index (. tabs getSelectedIndex)]
-                     (. tabs (remove index))))))
-
-; (defn- create
-;   "Create tabs pane."
-;   []
-;   (let [editor (editor/create)]
-;     (action/add editor "control T" add-tab)
-;     (action/add editor "control W" remove-tab)
-;     (. editor requestFocusInWindow)
-;     (doto (JTabbedPane.)
-;       (.setTabPlacement JTabbedPane/TOP)
-;       (.setTabLayoutPolicy JTabbedPane/SCROLL_TAB_LAYOUT)
-;       (.addTab new-title editor))))
+;; ------------------------------
+;; InputMap & ActionMap
+(defvar *tabs-input-map*  (. *tabs* getInputMap JComponent/WHEN_IN_FOCUSED_WINDOW))
+(defvar *tabs-action-map* (. *tabs* getActionMap))
 
 
+;; ------------------------------
+;; Actions
+(defvar *add-tab* (action/create (fn [tabs]
+                                   (println "called add-tab.")
+                                   (let [editor (editor/create)]
+                                     (. tabs addTab editor/new-title editor)
+                                     (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
+                                     (. editor requestFocusInWindow)))))
 
-; Default key bind action
-(add-key-bind "control T" add)
-(add-key-bind "control W" remove-current)
+(defvar *remove-tab* (action/create (fn [tabs]
+                                      (println "called remove-tab.")
+                                      (let [index (. tabs getSelectedIndex)]
+                                        (. tabs (remove index))))))
 
+(defvar *forward-tab* (action/create (fn [tabs]
+                                       (println "called forward-tab.")
+                                       (let [index (. tabs getSelectedIndex)]
+                                         (. tabs (remove index))))))
+;; ------------------------------
+;; Regist actions
+(. *tabs-action-map* put "add-tab" *add-tab*)
+(. *tabs-action-map* put "remove-tab" *remove-tab*)
+
+
+;; ------------------------------
+;; Key strokes
+(defvar *add-tab-key*    (KeyStroke/getKeyStroke KeyEvent/VK_T InputEvent/CTRL_DOWN_MASK))
+(defvar *remove-tab-key* (KeyStroke/getKeyStroke KeyEvent/VK_W InputEvent/CTRL_DOWN_MASK))
+
+
+;; ------------------------------
+;; Regist key strokes
+(. *tabs-input-map* put *add-tab-key* "add-tab")
+(. *tabs-input-map* put *remove-tab-key* "remove-tab")
