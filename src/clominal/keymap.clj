@@ -3,14 +3,6 @@
   (:import (javax.swing KeyStroke SwingUtilities)
            (java.awt.event InputEvent KeyEvent)))
 
-; (. *editor-key-map* addActionForKeyStroke *forward-char-key* *forward-char*)
-; (. *editor-key-map* addActionForKeyStroke *backward-char-key* *backward-char*)
-
-; (defvar key-forward-char  (KeyStroke/getKeyStroke KeyEvent/VK_F InputEvent/CTRL_DOWN_MASK))
-
-; (def-key-bind '(Ctrl F) forward-char)
-; (def-key-bind '(Ctrl B) backward-char)
-
 (defn create-operation
   "Create operation."
   [keymap action]
@@ -56,7 +48,7 @@
 ; ;Open file key bind.   
 ; (def key-bind-0 'F)
 ; (def key-bind-1 '(Ctrl Alt F))
-; (def key-bind-2 '[(Ctrl X) (Ctrl F)])
+; (def key-bind-2 '((Ctrl X) (Ctrl F)))
 
 (defn- get-key-stroke
   [key-bind]
@@ -83,6 +75,4 @@
   (let [keymap (:keymap operation)
         action (:action operation)
         keystroke (get-key-strokes key-bind)]
-    (println keystroke)
-    (println operation)
     (. keymap addActionForKeyStroke keystroke action)))
