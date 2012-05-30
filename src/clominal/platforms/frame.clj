@@ -1,8 +1,7 @@
-(ns clominal.gui.frame
+(ns clominal.platforms.frame
   (:use [clojure.contrib.def])
-  (:require ;[clominal.gui.actions.AddTabAction]
-            [clominal.gui.tabs :as tabs])
-  (:import (javax.swing JComponent JFrame JTabbedPane JEditorPane KeyStroke JButton)
+  (:require [clominal.platforms.tabs :as tabs])
+  (:import (javax.swing JComponent JFrame JTabbedPane JEditorPane KeyStroke JButton ImageIcon)
            (java.awt.event InputEvent KeyEvent)))
 
 (defn- create
@@ -14,6 +13,7 @@
     (.setSize 600 400)
     (.setLocationRelativeTo nil)
     (.add tabs/*tabs*)
+    (.setIconImage (. (ImageIcon. "./resources/clojure-icon.gif") getImage))
     ))
 
 (defvar *frame* (create) "'clominal' main frame.")

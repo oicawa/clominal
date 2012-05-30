@@ -1,16 +1,16 @@
-(ns clominal.keymap
+(ns clominal.keys.keymap
   (:use [clojure.contrib.def])
   (:import (javax.swing KeyStroke SwingUtilities)
-           (java.awt.event InputEvent KeyEvent)))
+           (java.awt.event InputEvent KeyEvent)
+           (clominal.keys LastKeyAction)))
 
 (defn create-operation
   "Create operation."
-  [keymap action]
+  [keymap action pre-keymap pre-actionmap]
   {:keymap keymap
-   :action action})
-
-; (import (javax.swing KeyStroke SwingUtilities)
-;         (java.awt.event InputEvent KeyEvent))
+   :action action
+   :pre-keymap pre-keymap
+   :pre-actionmap pre-actionmap})
 
 (def mask-keys
   {'Ctrl  InputEvent/CTRL_DOWN_MASK
@@ -45,11 +45,6 @@
    'Y KeyEvent/VK_Y
    'Z KeyEvent/VK_Z})
 
-; ;Open file key bind.   
-; (def key-bind-0 'F)
-; (def key-bind-1 '(Ctrl Alt F))
-; (def key-bind-2 '((Ctrl X) (Ctrl F)))
-
 (defn- get-key-stroke
   [key-bind]
   (loop [body     key-bind
@@ -63,16 +58,33 @@
                                     mask
                                     (+ mask (mask-keys last-key)))))))
   
-(defn- get-key-strokes
+(defn get-key-strokes
   [key-binds]
   (cond (symbol? key-binds) (KeyStroke/getKeyStroke (normal-keys key-binds) 0)
         (list? (first key-binds)) (map get-key-stroke key-binds)
         true (get-key-stroke key-binds)))
-  
-(defn def-key-bind
-  "Define key bind for specified operation."
+
+(defn def-key-bind2
+  "Define key bind for specified operation for 2 stroke over."
   [key-bind operation]
-  (let [keymap (:keymap operation)
-        action (:action operation)
-        keystroke (get-key-strokes key-bind)]
-    (. keymap addActionForKeyStroke keystroke action)))
+  (let [init-keymap   (operation :keymap)
+        action        (operation :action)
+        pre-keymap    (operation :pre-keymap)
+        pre-actionmap (operation :pre-actionmap)
+        all-strokes   (get-key-strokes key-bind)]
+    (if (seq? all-strokes)
+        (loop [keymap  init-keymap
+               stroke  (first all-strokes)
+               strokes (rest all-strokes)]
+          (if (= nil (first strokes))
+              (. keymap
+                 addActionForKeyStroke
+                 stroke
+                 (LastKeyAction. action init-keymap))
+              (let [new-keymap (pre-keymap (str stroke))
+                    new-action (pre-actionmap (str stroke))]
+                  ;現在のKeymapにnew-actionを追加。
+                (. keymap addActionForKeyStroke stroke new-action)
+                (recur new-keymap (first strokes) (rest strokes)))))
+        (. (operation :keymap) addActionForKeyStroke all-strokes action))))
+  
