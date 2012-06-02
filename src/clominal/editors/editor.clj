@@ -2,7 +2,7 @@
   (:use [clojure.contrib.def])
   (:require [clominal.keys.keymap :as keymap]
             [clominal.action :as action])
-  (:import (javax.swing JComponent JTextPane JScrollPane KeyStroke Action SwingUtilities)
+  (:import (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane KeyStroke Action SwingUtilities)
            (javax.swing.text DefaultEditorKit JTextComponent TextAction)
            (java.awt.event InputEvent KeyEvent)))
 
@@ -12,10 +12,11 @@
 ;;
 ;;------------------------------
 
-(defvar- key-map    (JTextComponent/getKeymap JTextComponent/DEFAULT_KEYMAP))
-;; TODO ActionMap can be got a static map?
-(defvar- action-map (SwingUtilities/getUIActionMap (JTextPane.)))
-(def keymaps {JTextComponent/DEFAULT_KEYMAP key-map})
+(def maps {"default" (let [editor (JTextPane.)]
+                       [(. editor getInputMap JComponent/WHEN_FOCUSED)
+                        (. editor getActionMap)])})
+
+
 
 ;;------------------------------
 ;;
@@ -23,28 +24,14 @@
 ;;
 ;;------------------------------
 
-(defn pre-actionmap
-  "Create a pre action for multi key binds."
-  [name]
-  (println "Called " name)
-  (action/create #(. %1 setKeymap (keymaps name))))
-
-(defn pre-keymap
-  [name]
-  (let [keymap (keymaps name)]
-    (if (= nil keymap)
-        (let [keymap (JTextComponent/addKeymap name nil)]
-          (def keymaps (assoc keymaps name keymap))
-          keymap)
-        keymap)))
-
 (defn- create-editor-operation
   "Create operation for editor."
   [src-info]
-  (let [action (cond (string? src-info) (. action-map get src-info)
+  (let [default-actionmap ((maps "default") 1)
+        action (cond (string? src-info) (. default-actionmap get src-info)
                      (instance? Action src-info) src-info
                      (fn? src-info) (action/create src-info))]
-    (keymap/create-operation key-map action pre-keymap pre-actionmap)))
+    (keymap/create-operation maps action)))
 
 
 
@@ -207,7 +194,8 @@
   "エディタを読み込み専用モードに設定する処理の名前です。")
 (defvar writable (create-editor-operation DefaultEditorKit/writableAction)
   "エディタを書き込み可能モードに設定する処理の名前です。")
-
+(defvar defaultKeyTyped (create-editor-operation DefaultEditorKit/defaultKeyTypedAction)
+  "キー入力イベントを受け取ったとき、キーマップエントリがない場合にデフォルトで実行される処理の名前です。")
 
 ;;
 ;; File action group.
@@ -229,7 +217,8 @@
 ;;------------------------------
 
 (defvar- default-settings
-  {'(Ctrl F) forward
+  {
+   '(Ctrl F) forward
    '(Ctrl P) up
    '(Ctrl N) down
    '(Ctrl B) backward
@@ -246,7 +235,7 @@
 (doseq [setting default-settings]
   (let [key-bind  (setting 0)
         operation (setting 1)]
-     (keymap/def-key-bind2 key-bind operation)))
+    (keymap/def-key-bind key-bind operation)))
 
 
 
@@ -262,5 +251,11 @@
 (defn create
   "Create editor pane."
   []
-  (JScrollPane. (JTextPane.) JScrollPane/VERTICAL_SCROLLBAR_ALWAYS JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS))
+  (let [map-vec           (maps "default")
+        default-inputmap  (map-vec 0)
+        default-actionmap (map-vec 1)]
+    (def editor (doto (JTextPane.)
+                  (.setInputMap  JComponent/WHEN_FOCUSED default-inputmap)
+                  (.setActionMap default-actionmap)))
+    (JScrollPane. editor JScrollPane/VERTICAL_SCROLLBAR_ALWAYS JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)))
 

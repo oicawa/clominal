@@ -5,18 +5,20 @@
    :extends javax.swing.AbstractAction
    :state state
    :init init
-   :constructors {[javax.swing.Action javax.swing.text.Keymap] []}
+   :constructors {[javax.swing.Action javax.swing.InputMap javax.swing.ActionMap] []}
    ))
 
 (defn -init
-  [action keymap]
-  [[] (ref {:action action
-            :keymap keymap})])
+  [action inputmap actionmap]
+  [[] (ref {:action    action
+            :inputmap  inputmap
+            :actionmap actionmap})])
 
 (defn -actionPerformed
   [this evt]
-  (let [{:keys [action keymap]} @(.state this)
+  (let [{:keys [action inputmap actionmap]} @(.state this)
         control (. evt getSource)]
     (. action actionPerformed evt)
-    (. control setKeymap keymap)))
+    (. control setInputMap inputmap)
+    (. control setActionMap actionmap)))
 
