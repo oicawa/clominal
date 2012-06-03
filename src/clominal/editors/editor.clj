@@ -12,9 +12,9 @@
 ;;
 ;;------------------------------
 
-(def maps {"default" (let [editor (JTextPane.)]
-                       [(. editor getInputMap JComponent/WHEN_FOCUSED)
-                        (. editor getActionMap)])})
+(def ref-maps (ref {"default" (let [editor (JTextPane.)]
+                                [(. editor getInputMap JComponent/WHEN_FOCUSED)
+                                 (. editor getActionMap)])}))
 
 
 
@@ -27,11 +27,11 @@
 (defn- create-editor-operation
   "Create operation for editor."
   [src-info]
-  (let [default-actionmap ((maps "default") 1)
+  (let [default-actionmap ((@ref-maps "default") 1)
         action (cond (string? src-info) (. default-actionmap get src-info)
                      (instance? Action src-info) src-info
                      (fn? src-info) (action/create src-info))]
-    (keymap/create-operation maps action)))
+    (keymap/create-operation ref-maps action)))
 
 
 
@@ -251,7 +251,7 @@
 (defn create
   "Create editor pane."
   []
-  (let [map-vec           (maps "default")
+  (let [map-vec           (@ref-maps "default")
         default-inputmap  (map-vec 0)
         default-actionmap (map-vec 1)]
     (def editor (doto (JTextPane.)

@@ -21,19 +21,19 @@
 ;; ------------------------------
 ;; Actions
 (defvar *add-tab* (action/create (fn [tabs]
-                                   (println "called add-tab.")
+                                   ;(println "called add-tab.")
                                    (let [editor (editor/create)]
                                      (. tabs addTab editor/new-title editor)
                                      (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
                                      (. editor requestFocusInWindow)))))
 
 (defvar *remove-tab* (action/create (fn [tabs]
-                                      (println "called remove-tab.")
+                                      ;(println "called remove-tab.")
                                       (let [index (. tabs getSelectedIndex)]
                                         (. tabs (remove index))))))
 
 (defvar *forward-tab* (action/create (fn [tabs]
-                                       (println "called forward-tab.")
+                                       ;(println "called forward-tab.")
                                        (let [index (. tabs getSelectedIndex)]
                                          (. tabs (remove index))))))
 ;; ------------------------------

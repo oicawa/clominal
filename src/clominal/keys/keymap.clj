@@ -7,48 +7,66 @@
 
 (defn- get-maps
   "
-  This function returns a vector constructed InputMap and ActionMap object from clojure map object.
-  If not found from the specified maps, it creates a new InputMap/ActionMap object, and add to maps.
+  This function returns a vector constructed InputMap and ActionMap object from ref-map.
+  If not found from the specified maps vector, it creates a new InputMap/ActionMap object, and add to ref-maps.
 
-  maps:    The target InputMap/ActionMap map object.
-  name:    The name of InputMap/ActionMap object.
-  return:  [inputmap actionmap]"
-  [maps name]
-  (let [map-vec (maps name)]
+  ref-maps : A 'ref' map object (key:key bind name, value:InputMap and ActionMap vector) of the target component.
+  name     : The key bind name.
+  return   : [inputmap actionmap]
+  "
+  [ref-maps name]
+  (let [map-vec (@ref-maps name)]
     (if (= nil map-vec)
         (let [map-vec [(InputMap.) (ActionMap.)]]
-          (def maps (assoc maps name map-vec))
+          (dosync (alter ref-maps assoc name map-vec))
           map-vec)
         map-vec)))
+
+
+(defn- print-maps
+  "
+  This function is for debugging.
+  "
+  [stroke-name inputmap actionmap]
+  (println "  stroke name = " stroke-name)
+  (println "  inputmap    = " inputmap)
+  (println "    keys      = " (map str (. inputmap keys)))
+  (println "  actionmap   = " actionmap)
+  (println "    keys      = " (map str (. actionmap keys))))
+
 
 (defn create-middle-keystroke-action
   "
   This function creates an action for the specified middle keystroke.
-  A middle keystroke action must assign the preper InputMap and ActionMap to current editor.
+  The created action must assign the appropriate InputMap object and ActionMap object to current editor.
   
-  maps:   A InputMap/ActionMap maps of the target component.
-  name:   Key bind name.
+  ref-maps : A 'ref' map object (key:key bind name, value:InputMap/ActionMap vector) of the target component.
+  name     : Key bind name.
   return: nil
   "
-  [maps name]
-  (let [target    (get-maps maps name)
-        inputmap  (target 0)
-        actionmap (target 1)]
-    (action/create #((doto %1
-                       (.setInputMap  JComponent/WHEN_FOCUSED inputmap)
-                       (.setActionMap actionmap))))))
+  [ref-maps name]
+  (let [map-vec   (get-maps ref-maps name)
+        inputmap  (map-vec 0)
+        actionmap (map-vec 1)]
+    (action/create #(let [editor %1]
+                      ; (println "----------")
+                      ; (println "Do middle key stroke action.")
+                      ; (print-maps name inputmap actionmap)
+                      (doto editor
+                        (.setInputMap  JComponent/WHEN_FOCUSED inputmap)
+                        (.setActionMap actionmap))))))
 
 (defn create-operation
   "
   This function create clojure map object as operation.
 
-  maps:                  Clojure map. Key is a name, and Value is a vector constructed InputMap object and ActionMap object.
-  action:                Action object.
-  return:                Operation object. (clojure map)
+  ref-maps : A 'ref' map object (key:key bind name, value:InputMap/ActionMap vector) of the target component.
+  action   : A Action object.
+  return   : A operation object. (clojure map)
   "
-  [maps action]
-  {:maps                  maps
-   :action                action})
+  [ref-maps action]
+  {:ref-maps ref-maps
+   :action   action})
 
 (def mask-keys
   {'Ctrl  InputEvent/CTRL_DOWN_MASK
@@ -85,11 +103,11 @@
 
 (defn get-key-stroke
   "
-  This function get keystroke symbol or those list,
+  This function get keystroke symbol or keystroke symbol list,
   and create KeyStroke object.
   
-  key-bind: Keystroke symbol, or keystroke symbols list. [ex: '(Ctrl F)]
-  return:   KeyStroke object, or KeyStroke objects list. [ex: #<KeyStroke ctrl pressed F>]
+  key-bind : Keystroke symbol, or keystroke symbols list. [ex: '(Ctrl F)]
+  return   : KeyStroke object, or KeyStroke objects list. [ex: #<KeyStroke ctrl pressed F>]
   "
   [key-bind]
   (loop [body     key-bind
@@ -120,12 +138,14 @@
 (defn def-key-bind
   "Define key bind for specified operation for one stroke or more."
   [key-bind operation]
-  (let [maps              (operation :maps)
+  (let [ref-maps          (operation :ref-maps)
         action            (operation :action)
-        default-maps      (maps "default")
+        default-maps      (@ref-maps "default")
         default-inputmap  (default-maps 0)
         default-actionmap (default-maps 1)
         all-strokes       (get-key-strokes key-bind)]
+    ; (println "----------")
+    ; (println "all-strokes = " all-strokes)
     (if (seq? all-strokes)
         (loop [inputmap    default-inputmap
                actionmap   default-actionmap
@@ -135,14 +155,22 @@
             (if (= nil (first strokes))
                 (do
                   (. inputmap  put stroke stroke-name)
-                  (. actionmap put stroke-name (LastKeyAction. action default-inputmap default-actionmap)))
-                (let [map-vec       (get-maps maps stroke-name)
-                      new-inputmap  (map-vec 0)
-                      new-actionmap (map-vec 1)
-                      middle-action (create-middle-keystroke-action maps stroke-name)]
+                  (. actionmap put stroke-name (LastKeyAction. action default-inputmap default-actionmap))
+                  ; (println "Regist last key stroke action.")
+                  ; (print-maps stroke-name inputmap actionmap)
+                  )
+                (let [map-vec        (get-maps ref-maps stroke-name)
+                      next-inputmap  (map-vec 0)
+                      next-actionmap (map-vec 1)
+                      middle-action  (create-middle-keystroke-action ref-maps stroke-name)]
                   (. inputmap  put stroke stroke-name)
                   (. actionmap put stroke-name middle-action)
-                  (recur new-inputmap new-actionmap (first strokes) (rest strokes))))))
+                  ; (println "Regist middle key stroke action.")
+                  ; (print-maps stroke-name inputmap actionmap)
+                  (recur next-inputmap next-actionmap (first strokes) (rest strokes))))))
         (do
           (. default-inputmap  put all-strokes (str all-strokes))
-          (. default-actionmap put (str all-strokes) action)))))
+          (. default-actionmap put (str all-strokes) action)
+          ; (println "Regist Single key stroke action.")
+          ; (print-maps (str all-strokes) default-inputmap default-actionmap)
+          ))))

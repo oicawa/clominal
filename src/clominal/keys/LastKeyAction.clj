@@ -1,5 +1,5 @@
 (ns clominal.keys.LastKeyAction
-  (:import (javax.swing AbstractAction Action)
+  (:import (javax.swing AbstractAction Action JComponent)
            (javax.swing.text Keymap))
   (:gen-class
    :extends javax.swing.AbstractAction
@@ -19,6 +19,6 @@
   (let [{:keys [action inputmap actionmap]} @(.state this)
         control (. evt getSource)]
     (. action actionPerformed evt)
-    (. control setInputMap inputmap)
+    (. control setInputMap JComponent/WHEN_FOCUSED inputmap)
     (. control setActionMap actionmap)))
 
