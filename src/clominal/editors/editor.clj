@@ -218,18 +218,24 @@
 
 (defvar- default-settings
   {
-   '(Ctrl F) forward
-   '(Ctrl P) up
-   '(Ctrl N) down
-   '(Ctrl B) backward
-   '(Alt F) nextWord
-   '(Alt B) previousWord
-   '(Ctrl A) beginLine
-   '(Ctrl E) endLine
-   '(Ctrl H) deletePrevChar
-   '(Ctrl D) deleteNextChar
-   '((Ctrl X) (Ctrl F)) openFile
-   '((Ctrl X) (Ctrl S)) saveFile
+   '(Ctrl \g) beginLine
+   '(Ctrl \h) backward
+   '(Ctrl \j) down
+   '(Ctrl \k) up
+   '(Ctrl \l) forward
+   '(Ctrl \;) endLine
+
+   '(Alt \g) begin
+   '(Alt \h) previousWord
+   '(Alt \j) pageDown
+   '(Alt \k) pageUp
+   '(Alt \l) nextWord
+   '(Alt \;) end
+
+   '(Ctrl \b) deletePrevChar
+   '(Ctrl \d) deleteNextChar
+   '((Ctrl \x) (Ctrl \f)) openFile
+   '((Ctrl \x) (Ctrl \s)) saveFile
   })
 
 (doseq [setting default-settings]

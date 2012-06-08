@@ -70,56 +70,56 @@
 
 (def mask-keys
   {'Ctrl  InputEvent/CTRL_DOWN_MASK
-   'Alt   InputEvent/ALT_DOWN_MASK
-   'Shift InputEvent/SHIFT_DOWN_MASK})
+   'Alt   InputEvent/ALT_DOWN_MASK})
 
 (def normal-keys
-  {'A KeyEvent/VK_A
-   'B KeyEvent/VK_B
-   'C KeyEvent/VK_C
-   'D KeyEvent/VK_D
-   'E KeyEvent/VK_E
-   'F KeyEvent/VK_F
-   'G KeyEvent/VK_G
-   'H KeyEvent/VK_H
-   'I KeyEvent/VK_I
-   'J KeyEvent/VK_J
-   'K KeyEvent/VK_K
-   'L KeyEvent/VK_L
-   'M KeyEvent/VK_M
-   'N KeyEvent/VK_N
-   'O KeyEvent/VK_O
-   'P KeyEvent/VK_P
-   'Q KeyEvent/VK_Q
-   'R KeyEvent/VK_R
-   'S KeyEvent/VK_S
-   'T KeyEvent/VK_T
-   'U KeyEvent/VK_U
-   'V KeyEvent/VK_V
-   'W KeyEvent/VK_W
-   'X KeyEvent/VK_X
-   'Y KeyEvent/VK_Y
-   'Z KeyEvent/VK_Z})
+  {\a KeyEvent/VK_A
+   \b KeyEvent/VK_B
+   \c KeyEvent/VK_C
+   \d KeyEvent/VK_D
+   \e KeyEvent/VK_E
+   \f KeyEvent/VK_F
+   \g KeyEvent/VK_G
+   \h KeyEvent/VK_H
+   \i KeyEvent/VK_I
+   \j KeyEvent/VK_J
+   \k KeyEvent/VK_K
+   \l KeyEvent/VK_L
+   \m KeyEvent/VK_M
+   \n KeyEvent/VK_N
+   \o KeyEvent/VK_O
+   \p KeyEvent/VK_P
+   \q KeyEvent/VK_Q
+   \r KeyEvent/VK_R
+   \s KeyEvent/VK_S
+   \t KeyEvent/VK_T
+   \u KeyEvent/VK_U
+   \v KeyEvent/VK_V
+   \w KeyEvent/VK_W
+   \x KeyEvent/VK_X
+   \y KeyEvent/VK_Y
+   \z KeyEvent/VK_Z
+   \; KeyEvent/VK_SEMICOLON})
 
 (defn get-key-stroke
   "
   This function get keystroke symbol or keystroke symbol list,
   and create KeyStroke object.
   
-  key-bind : Keystroke symbol, or keystroke symbols list. [ex: '(Ctrl F)]
+  key-bind : Keystroke char, or keystroke symbols and char list. [ex: '(Ctrl \f)]
   return   : KeyStroke object, or KeyStroke objects list. [ex: #<KeyStroke ctrl pressed F>]
   "
   [key-bind]
   (loop [body     key-bind
          last-key nil
          mask     0]
-    (cond (symbol? body) (KeyStroke/getKeyStroke (normal-keys body) 0)
-          (= '() body)   (KeyStroke/getKeyStroke (normal-keys last-key) mask)
-          true           (recur (rest body)
-                                (first body)
-                                (if (= nil last-key)
-                                    mask
-                                    (+ mask (mask-keys last-key)))))))
+    (cond (char? body) (KeyStroke/getKeyStroke (normal-keys body) 0)
+          (= '() body) (KeyStroke/getKeyStroke (normal-keys last-key) mask)
+          true         (recur (rest body)
+                              (first body)
+                              (if (= nil last-key)
+                                  mask
+                                  (+ mask (mask-keys last-key)))))))
   
 (defn get-key-strokes
   "
