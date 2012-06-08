@@ -113,7 +113,7 @@
   (loop [body     key-bind
          last-key nil
          mask     0]
-    (cond (char? body) (KeyStroke/getKeyStroke (normal-keys body) 0)
+    (cond (char? body) (KeyStroke/getKeyStroke body)
           (= '() body) (KeyStroke/getKeyStroke (normal-keys last-key) mask)
           true         (recur (rest body)
                               (first body)
