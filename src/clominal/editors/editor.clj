@@ -202,13 +202,24 @@
 ;; File action group.
 ;;
 
-(defvar openFile (create-editor-operation (fn [editor]
-                                            (println "called 'openFile'.")))
+(defvar openFile
+  (create-editor-operation
+    (fn [editor]
+      (println "called 'openFile'.")))
   "ファイルをオープンします。")
-(defvar saveFile (create-editor-operation (fn [editor]
-                                            (println "called 'saveFile'.")))
+
+(defvar saveFile
+  (create-editor-operation
+    (fn [editor]
+      (println "called 'saveFile'.")))
   "ファイルを保存します。")
 
+(defvar changeBuffer
+  (create-editor-operation
+    (fn [editor]
+      (println "called 'changeBuffer'.")))
+  "表示するバッファを変更します。")
+          
 
 
 ;;------------------------------
@@ -237,6 +248,7 @@
    '(Ctrl \d) deleteNextChar
    '((Ctrl \x) (Ctrl \f)) openFile
    '((Ctrl \x) (Ctrl \s)) saveFile
+   '((Ctrl \x) \b) changeBuffer
   })
 
 (doseq [setting default-settings]
