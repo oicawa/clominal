@@ -1,10 +1,11 @@
 (ns clominal.editors.editor
   (:use [clojure.contrib.def])
   (:require [clominal.keys.keymap :as keymap]
-            [clominal.action :as action])
-  (:import (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane KeyStroke Action SwingUtilities)
-           (javax.swing.text DefaultEditorKit JTextComponent TextAction)
-           (java.awt.event InputEvent KeyEvent)))
+            [clominal.action :as action]
+            [clominal.utils.guiutils :as guiutils])
+  (:import (java.awt GridBagLayout)
+           (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel)
+           (javax.swing.text DefaultEditorKit)))
 
 ;;------------------------------
 ;;
@@ -259,9 +260,35 @@
   []
   (let [map-vec           (@ref-maps "default")
         default-inputmap  (map-vec 0)
-        default-actionmap (map-vec 1)]
-    (def editor (doto (JTextPane.)
-                  (.setInputMap  JComponent/WHEN_FOCUSED default-inputmap)
-                  (.setActionMap default-actionmap)))
-    (JScrollPane. editor JScrollPane/VERTICAL_SCROLLBAR_ALWAYS JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)))
+        default-actionmap (map-vec 1)
+        editor            (doto (JTextPane.)
+                            (.setInputMap  JComponent/WHEN_FOCUSED default-inputmap)
+                            (.setActionMap default-actionmap))
+        scroll            (JScrollPane. editor JScrollPane/VERTICAL_SCROLLBAR_ALWAYS JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)
+        caret-position    (doto (JLabel.)
+                            (.setText "12:34"))
+        status-pane       (doto (JPanel.)
+                            (.add caret-position))
+        command-line      (doto (JTextField.)
+                            (.setText "コマンドライン")
+                            (.setName "command-line"))
+        editor-panel      (doto (JPanel. (GridBagLayout.))
+                            (guiutils/grid-bag-layout
+                              :fill :BOTH
+                              :gridx 0
+                              :gridy 0
+                              :weightx 1.0
+                              :weighty 1.0
+                              scroll
+                              :fill :HORIZONTAL
+                              :weightx 1.0
+                              :weighty 0.0
+                              :gridy 1
+                              status-pane
+                              :gridy 2
+                              command-line
+                            ))
+        ]
+    editor-panel))
+
 
