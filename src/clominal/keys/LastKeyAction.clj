@@ -20,5 +20,6 @@
         control (. evt getSource)]
     (. action actionPerformed evt)
     (. control setInputMap JComponent/WHEN_FOCUSED inputmap)
-    (. control setActionMap actionmap)))
+    (. control setActionMap actionmap)
+    (. control enableInputMethods true)))
 

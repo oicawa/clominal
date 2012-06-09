@@ -48,11 +48,9 @@
   (let [map-vec   (get-maps ref-maps name)
         inputmap  (map-vec 0)
         actionmap (map-vec 1)]
-    (action/create #(let [editor %1]
-                      ; (println "----------")
-                      ; (println "Do middle key stroke action.")
-                      ; (print-maps name inputmap actionmap)
-                      (doto editor
+    (action/create #(let [component %1]
+                      (. component enableInputMethods false)
+                      (doto component
                         (.setInputMap  JComponent/WHEN_FOCUSED inputmap)
                         (.setActionMap actionmap))))))
 
