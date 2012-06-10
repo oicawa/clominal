@@ -53,6 +53,17 @@
                         (next body)))))))))
 
 
-; (defn get-child
-;   [name]
-;   (
+(defn get-component
+  [root-container & all-names]
+  (loop [container  root-container
+         name       (first all-names)
+         rest-names (rest all-names)]
+    (if (= nil name)
+        nil
+        (let [children (. container getComponents)
+              targets  (filter #(= name (. %1 getName)) children)]
+          (if (= 1 (count targets))
+              (recur (first targets) (first rest-names) (rest rest-names))
+              nil)))))
+              
+                    
