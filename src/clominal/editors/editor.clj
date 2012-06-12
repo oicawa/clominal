@@ -3,7 +3,7 @@
   (:require [clominal.keys.keymap :as keymap]
             [clominal.action :as action]
             [clominal.utils.guiutils :as guiutils])
-  (:import (java.awt GridBagLayout)
+  (:import (java.awt Font GraphicsEnvironment GridBagLayout)
            (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel)
            (javax.swing.text DefaultEditorKit)))
 
@@ -266,6 +266,16 @@
 
 (def new-title "新規テキスト")
 
+(defn get-font-names
+  []
+  (doseq [font (.. GraphicsEnvironment getLocalGraphicsEnvironment getAvailableFontFamilyNames)]
+    (println font)))
+
+(defn set-font
+  [component name type size]
+  (. component setFont (Font. name type size)))
+
+
 ;; Constractor.
 (defn create
   "Create editor pane."
@@ -301,6 +311,7 @@
                               command-line
                             ))
         ]
+    (set-font editor "ＭＳ ゴシック" Font/PLAIN 14)
     editor-panel))
 
 

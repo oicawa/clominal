@@ -21,5 +21,7 @@
     (. action actionPerformed evt)
     (. control setInputMap JComponent/WHEN_FOCUSED inputmap)
     (. control setActionMap actionmap)
-    (. control enableInputMethods true)))
+    ;(. control enableInputMethods true)
+    (.. control getInputContext (setCompositionEnabled true))
+    ))
 

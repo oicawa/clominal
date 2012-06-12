@@ -49,7 +49,8 @@
         inputmap  (map-vec 0)
         actionmap (map-vec 1)]
     (action/create #(let [component %1]
-                      (. component enableInputMethods false)
+                      ;(. component enableInputMethods false)
+                      (.. component getInputContext (setCompositionEnabled false))
                       (doto component
                         (.setInputMap  JComponent/WHEN_FOCUSED inputmap)
                         (.setActionMap actionmap))))))
