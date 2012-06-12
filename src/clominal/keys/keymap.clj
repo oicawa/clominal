@@ -112,7 +112,8 @@
    \x KeyEvent/VK_X
    \y KeyEvent/VK_Y
    \z KeyEvent/VK_Z
-   \; KeyEvent/VK_SEMICOLON})
+   \; KeyEvent/VK_SEMICOLON
+   \: KeyEvent/VK_COLON})
 
 (defn get-key-stroke
   "

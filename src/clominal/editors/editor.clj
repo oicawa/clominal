@@ -230,19 +230,19 @@
 
 (defvar- default-settings
   {
-   '(Ctrl \g) beginLine
-   '(Ctrl \h) backward
-   '(Ctrl \j) down
-   '(Ctrl \k) up
-   '(Ctrl \l) forward
-   '(Ctrl \;) endLine
+   '(Ctrl \h) beginLine
+   '(Ctrl \j) backward
+   '(Ctrl \k) down
+   '(Ctrl \l) up
+   '(Ctrl \;) forward
+   '(Ctrl \:) endLine
 
-   '(Alt \g) begin
-   '(Alt \h) previousWord
-   '(Alt \j) pageDown
-   '(Alt \k) pageUp
-   '(Alt \l) nextWord
-   '(Alt \;) end
+   '(Alt \h) begin
+   '(Alt \j) previousWord
+   '(Alt \k) pageDown
+   '(Alt \l) pageUp
+   '(Alt \;) nextWord
+   '(Alt \:) end
 
    '(Ctrl \b) deletePrevChar
    '(Ctrl \d) deleteNextChar
