@@ -1,6 +1,7 @@
 (ns clominal.keys.LastKeyAction
   (:import (javax.swing AbstractAction Action JComponent)
            (javax.swing.text Keymap))
+  (:require [clominal.keys.keymap :as keymap])
   (:gen-class
    :extends javax.swing.AbstractAction
    :state state
@@ -21,7 +22,6 @@
     (. action actionPerformed evt)
     (. control setInputMap JComponent/WHEN_FOCUSED inputmap)
     (. control setActionMap actionmap)
-    ;(. control enableInputMethods true)
-    (.. control getInputContext (setCompositionEnabled true))
+    (keymap/enable-inputmethod control true)
     ))
 

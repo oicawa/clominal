@@ -1,6 +1,7 @@
 (ns clominal.keys.keymap
   (:use [clojure.contrib.def])
-  (:require [clominal.action :as action])
+  (:require [clominal.action :as action]
+            [clominal.utils.env :as env])
   (:import (javax.swing InputMap ActionMap JComponent KeyStroke SwingUtilities)
            (java.awt.event InputEvent KeyEvent)
            (clominal.keys LastKeyAction)))
@@ -35,6 +36,20 @@
   (println "    keys      = " (map str (. actionmap keys))))
 
 
+(def windows-composition-enabled? (ref nil))
+
+(defn enable-inputmethod
+  [component flag]
+  (if (env/windows?)
+  	  (let [icontext  (. component getInputContext)
+            current   (. icontext isCompositionEnabled)]
+        (if flag
+          (. icontext (setCompositionEnabled @windows-composition-enabled?))
+          (do
+  	        (dosync (ref-set windows-composition-enabled? current))
+            (. icontext (setCompositionEnabled false)))))
+      (. component enableInputMethods flag)))
+
 (defn create-middle-keystroke-action
   "
   This function creates an action for the specified middle keystroke.
@@ -49,8 +64,7 @@
         inputmap  (map-vec 0)
         actionmap (map-vec 1)]
     (action/create #(let [component %1]
-                      ;(. component enableInputMethods false)
-                      (.. component getInputContext (setCompositionEnabled false))
+                      (enable-inputmethod component false)
                       (doto component
                         (.setInputMap  JComponent/WHEN_FOCUSED inputmap)
                         (.setActionMap actionmap))))))
