@@ -5,7 +5,9 @@
   (:require [clominal.action :as action]
             [clominal.keys.keymap :as keymap]
             [clominal.platforms.frame :as frame])
+  (:import (javax.swing SwingUtilities))
   (:gen-class))
 
 (defn -main [& args]
-  (. frame/*frame* setVisible true))
+  (SwingUtilities/invokeLater
+    #(. frame/*frame* setVisible true)))

@@ -22,6 +22,5 @@
     (. action actionPerformed evt)
     (. control setInputMap JComponent/WHEN_FOCUSED inputmap)
     (. control setActionMap actionmap)
-    (keymap/enable-inputmethod control true)
-    ))
+    (keymap/enable-inputmethod control true)))
 
