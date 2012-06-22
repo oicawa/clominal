@@ -42,13 +42,16 @@
 (defmacro enable-inputmethod
   [component flag]
   (if (env/windows?)
-      `(let [icontext (. ~component getInputContext)
-             current  (. icontext isCompositionEnabled)]
-        (if ~flag
-          (. icontext (setCompositionEnabled @windows-composition-enabled?))
-          (do
-            (dosync (ref-set windows-composition-enabled? current))
-            (. icontext (setCompositionEnabled false)))))
+  	  (let [icontext (gensym "icontext")
+            current  (gensym "current")
+            enabled? (gensym "enabled?")]
+        `(let [~icontext (. ~component getInputContext)
+               ~current  (. ~icontext isCompositionEnabled)]
+          (if ~flag
+            (. ~icontext (setCompositionEnabled @windows-composition-enabled?))
+            (do
+              (dosync (ref-set windows-composition-enabled? ~current))
+              (. ~icontext (setCompositionEnabled false))))))
       `(. ~component enableInputMethods ~flag)))
 
         
