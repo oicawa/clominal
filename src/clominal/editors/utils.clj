@@ -1,8 +1,9 @@
-(ns clominal.editors.editor
+(ns clominal.editors.utils
   (:use [clojure.contrib.def])
   (:require [clominal.keys.keymap :as keymap]
             [clominal.action :as action]
-            [clominal.utils.guiutils :as guiutils])
+            [clominal.utils.guiutils :as guiutils]
+            [clominal.utils.env :as env])
   (:import (java.awt Font GraphicsEnvironment GridBagLayout)
            (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel)
            (javax.swing.text DefaultEditorKit)))
@@ -25,7 +26,7 @@
 ;;
 ;;------------------------------
 
-(defn- create-editor-operation
+(defn create-editor-operation
   "Create operation for editor."
   [src-info]
   (let [default-actionmap ((@ref-maps "default") 1)
@@ -104,7 +105,7 @@
 ;; Word
 (defvar deletePrevWord (create-editor-operation DefaultEditorKit/deletePrevWordAction)
   "選択範囲の先頭の前の単語を削除する処理の名前です。")
-(defvar deleteNextWord (create-editor-operation DefaultEditorKit/deleteNextWordAction)
+(defvar deletenextword (create-editor-operation DefaultEditorKit/deleteNextWordAction)
   "選択範囲の先頭に続く単語を削除する処理の名前です。")
 
 
@@ -205,13 +206,20 @@
 (defvar openFile
   (create-editor-operation
     (fn [editor]
-      (println "called 'openFile'.")))
+      (println "called 'openFile'.")
+      (let [tab (.. editor getParent getParent getParent getParent)
+            components (. tab getComponents)]
+        (doseq [component components]
+          (println (. component getName))))
+      ))
   "ファイルをオープンします。")
 
 (defvar saveFile
   (create-editor-operation
     (fn [editor]
-      (println "called 'saveFile'.")))
+      (println "called 'saveFile'.")
+      (println "----------")
+      (println (.. editor getText))))
   "ファイルを保存します。")
 
 (defvar changeBuffer
@@ -274,45 +282,5 @@
 (defn set-font
   [component name type size]
   (. component setFont (Font. name type size)))
-
-
-;; Constractor.
-(defn create
-  "Create editor pane."
-  []
-  (let [map-vec           (@ref-maps "default")
-        default-inputmap  (map-vec 0)
-        default-actionmap (map-vec 1)
-        editor            (doto (JTextPane.)
-                            (.setInputMap  JComponent/WHEN_FOCUSED default-inputmap)
-                            (.setActionMap default-actionmap)
-                            (.enableInputMethods true))
-        scroll            (JScrollPane. editor JScrollPane/VERTICAL_SCROLLBAR_ALWAYS JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)
-        caret-position    (doto (JLabel.)
-                            (.setText "12:34"))
-        status-pane       (doto (JPanel.)
-                            (.add caret-position))
-        command-line      (doto (JTextField.)
-                            (.setText "コマンドライン")
-                            (.setName "command-line"))
-        editor-panel      (doto (JPanel. (GridBagLayout.))
-                            (guiutils/grid-bag-layout
-                              :fill :BOTH
-                              :gridx 0
-                              :gridy 0
-                              :weightx 1.0
-                              :weighty 1.0
-                              scroll
-                              :fill :HORIZONTAL
-                              :weightx 1.0
-                              :weighty 0.0
-                              :gridy 1
-                              status-pane
-                              :gridy 2
-                              command-line
-                            ))
-        ]
-    (set-font editor "ＭＳ ゴシック" Font/PLAIN 14)
-    editor-panel))
 
 

@@ -2,7 +2,7 @@
   (:use [clojure.contrib.def])
   (:require [clominal.action :as action]
             [clominal.utils.env :as env])
-  (:import (javax.swing InputMap ActionMap JComponent KeyStroke)
+  (:import (javax.swing InputMap ActionMap JComponent KeyStroke SwingUtilities)
            (java.awt Toolkit)
            (java.awt.event InputEvent KeyEvent)
            (clominal.keys LastKeyAction)))
@@ -32,27 +32,39 @@
   [stroke-name inputmap actionmap]
   (println "  stroke name = " stroke-name)
   (println "  inputmap    = " inputmap)
-  (println "    keys      = " (map str (. inputmap keys)))
+  ;(println "    keys      = " (map str (. inputmap keys)))
+  (println "    keys:")
+  (doseq [key (. inputmap keys)]
+    (println "      " (str key)))
   (println "  actionmap   = " actionmap)
-  (println "    keys      = " (map str (. actionmap keys))))
+  ;(println "    keys      = " (map str (. actionmap keys)))
+  ;(println "    keys      = " (. actionmap keys))
+  (println "    keys:")
+  (doseq [key (. actionmap keys)]
+    (println "      " (str key)))
+  )
 
 
 (def windows-composition-enabled? (ref nil))
 
-(defmacro enable-inputmethod
+; (defmacro enable-inputmethod
+;   [component flag]
+;   (if (env/windows?)
+;   	  (let [icontext (gensym "icontext")
+;             current  (gensym "current")
+;             enabled? (gensym "enabled?")]
+;         `(let [~icontext (. ~component getInputContext)
+;                ~current  (. ~icontext isCompositionEnabled)]
+;           (if ~flag
+;             (. ~icontext (setCompositionEnabled @windows-composition-enabled?))
+;             (do
+;               (dosync (ref-set windows-composition-enabled? ~current))
+;               (. ~icontext (setCompositionEnabled false))))))
+;       `(. ~component enableInputMethods ~flag)))
+(defn enable-inputmethod
   [component flag]
-  (if (env/windows?)
-  	  (let [icontext (gensym "icontext")
-            current  (gensym "current")
-            enabled? (gensym "enabled?")]
-        `(let [~icontext (. ~component getInputContext)
-               ~current  (. ~icontext isCompositionEnabled)]
-          (if ~flag
-            (. ~icontext (setCompositionEnabled @windows-composition-enabled?))
-            (do
-              (dosync (ref-set windows-composition-enabled? ~current))
-              (. ~icontext (setCompositionEnabled false))))))
-      `(. ~component enableInputMethods ~flag)))
+  (println (format "enableInputMethods(%s)" flag))
+  (. component enableInputMethods flag))
 
         
 
@@ -70,10 +82,15 @@
         inputmap  (map-vec 0)
         actionmap (map-vec 1)]
     (action/create #(let [component %1]
-                      (enable-inputmethod component false)
-                      (doto component
-                        (.setInputMap  JComponent/WHEN_FOCUSED inputmap)
-                        (.setActionMap actionmap))))))
+                      ;(enable-inputmethod component false)
+                      (SwingUtilities/invokeLater
+                        (fn []
+                          (doto component
+                            (.setEditable false)
+                            (.setInputMap  JComponent/WHEN_FOCUSED inputmap)
+                            (.setActionMap actionmap))
+                          ; (println "isEditable =" (. component isEditable))
+                          ))))))
 
 (defn create-operation
   "
@@ -164,8 +181,8 @@
         default-inputmap  (default-maps 0)
         default-actionmap (default-maps 1)
         all-strokes       (get-key-strokes key-bind)]
-    ; (println "----------")
-    ; (println "all-strokes = " all-strokes)
+    ;(println "----------")
+    ;(println "all-strokes = " all-strokes)
     (if (seq? all-strokes)
         (loop [inputmap    default-inputmap
                actionmap   default-actionmap
@@ -176,8 +193,7 @@
                 (do
                   (. inputmap  put stroke stroke-name)
                   (. actionmap put stroke-name (LastKeyAction. action default-inputmap default-actionmap))
-                  ; (println "Regist last key stroke action.")
-                  ; (print-maps stroke-name inputmap actionmap)
+                  ;(print-maps stroke-name inputmap actionmap)
                   )
                 (let [map-vec        (get-maps ref-maps stroke-name)
                       next-inputmap  (map-vec 0)
@@ -185,12 +201,10 @@
                       middle-action  (create-middle-keystroke-action ref-maps stroke-name)]
                   (. inputmap  put stroke stroke-name)
                   (. actionmap put stroke-name middle-action)
-                  ; (println "Regist middle key stroke action.")
-                  ; (print-maps stroke-name inputmap actionmap)
+                  ;(print-maps stroke-name inputmap actionmap)
                   (recur next-inputmap next-actionmap (first strokes) (rest strokes))))))
         (do
           (. default-inputmap  put all-strokes (str all-strokes))
           (. default-actionmap put (str all-strokes) action)
-          ; (println "Regist Single key stroke action.")
-          ; (print-maps (str all-strokes) default-inputmap default-actionmap)
+          ;(print-maps (str all-strokes) default-inputmap default-actionmap)
           ))))

@@ -1,5 +1,5 @@
 (ns clominal.keys.LastKeyAction
-  (:import (javax.swing AbstractAction Action JComponent)
+  (:import (javax.swing AbstractAction Action JComponent SwingUtilities)
            (javax.swing.text Keymap))
   (:require [clominal.keys.keymap :as keymap])
   (:gen-class
@@ -17,10 +17,16 @@
 
 (defn -actionPerformed
   [this evt]
-  (let [{:keys [action inputmap actionmap]} @(.state this)
-        control (. evt getSource)]
+  (let [{:keys    [action inputmap actionmap]} @(.state this)
+        component (. evt getSource)]
     (. action actionPerformed evt)
-    (. control setInputMap JComponent/WHEN_FOCUSED inputmap)
-    (. control setActionMap actionmap)
-    (keymap/enable-inputmethod control true)))
+    (SwingUtilities/invokeLater
+      #(do
+        (. component setEditable true)
+        (. component setInputMap JComponent/WHEN_FOCUSED inputmap)
+        (. component setActionMap actionmap)
+        ; (keymap/enable-inputmethod control true)
+        ;(println "isEditable =" (. component isEditable))
+        ))
+    ))
 
