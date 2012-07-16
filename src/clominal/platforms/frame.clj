@@ -4,17 +4,27 @@
   (:import (javax.swing JComponent JFrame JTabbedPane JEditorPane KeyStroke JButton ImageIcon)
            (java.awt.event InputEvent KeyEvent)))
 
-(defn- create
+(defn create
   "Create clominal main frame."
-  []
-  (doto (JFrame.)
-    (.setTitle "clominal")
-    (.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE)
-    (.setSize 600 400)
-    (.setLocationRelativeTo nil)
-    (.add tabs/*tabs*)
-    (.setIconImage (. (ImageIcon. "./resources/clojure-icon.gif") getImage))
-    ))
+  [mode]
+  (let [close-option (if (= mode "repl")
+                         JFrame/DISPOSE_ON_CLOSE
+                         JFrame/EXIT_ON_CLOSE)]
+    (println "mode =" mode)
+    (println "JFrame/DISPOSE_ON_CLOSE =" JFrame/DISPOSE_ON_CLOSE)
+    (println "JFrame/EXIT_ON_CLOSE    =" JFrame/EXIT_ON_CLOSE)
+    (println "close-option =" close-option)
+    (doto (JFrame.)
+      (.setTitle "clominal")
+      (.setDefaultCloseOperation close-option)
+      (.setSize 600 400)
+      (.setLocationRelativeTo nil)
+      (.add tabs/*tabs*)
+      (.setIconImage (. (ImageIcon. "./resources/clojure-icon.gif") getImage)))))
 
-(defvar *frame* (create) "'clominal' main frame.")
+(def *frame* "'clominal' main frame.")
+
+(defn assign
+  [mode]
+  (def *frame* (create mode)))
 
