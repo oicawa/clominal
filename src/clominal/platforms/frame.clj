@@ -7,13 +7,9 @@
 (defn create
   "Create clominal main frame."
   [mode]
-  (let [close-option (if (= mode "repl")
+  (let [close-option (if (= mode "d")
                          JFrame/DISPOSE_ON_CLOSE
                          JFrame/EXIT_ON_CLOSE)]
-    (println "mode =" mode)
-    (println "JFrame/DISPOSE_ON_CLOSE =" JFrame/DISPOSE_ON_CLOSE)
-    (println "JFrame/EXIT_ON_CLOSE    =" JFrame/EXIT_ON_CLOSE)
-    (println "close-option =" close-option)
     (doto (JFrame.)
       (.setTitle "clominal")
       (.setDefaultCloseOperation close-option)

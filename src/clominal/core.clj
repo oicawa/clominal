@@ -13,7 +13,5 @@
     #(do
       (let [max  (count args)
             mode (if (= 0 max) nil ((vec args) 0))]
-        (println "Count of Arguments = " max)
-        (println "1st Argument = " mode)
         (frame/assign mode)
         (. frame/*frame* setVisible true)))))
