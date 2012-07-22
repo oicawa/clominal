@@ -4,5 +4,8 @@
                  [org.clojure/clojure-contrib "1.2.0"]]
   :main clominal.core
   :aot [clominal.keys.LastKeyAction
-        clominal.editors.EditorPanel]
-)
+        clominal.editors.MiniBuffer
+        clominal.editors.ModeLine
+        clominal.editors.TextEditor
+        clominal.editors.EditorPanel
+        ])

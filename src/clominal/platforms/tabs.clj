@@ -2,6 +2,7 @@
   (:use [clojure.contrib.def])
   (:require [clominal.action :as action]
             [clominal.editors.utils :as utils]
+            [clominal.editors.editor :as editor]
             )
   (:import (javax.swing JComponent JTabbedPane JPanel JEditorPane KeyStroke AbstractAction)
            (java.awt.event InputEvent KeyEvent)
@@ -23,7 +24,7 @@
 ;; ------------------------------
 ;; Actions
 (defvar *add-tab* (action/create (fn [tabs]
-                                   ;(println "called add-tab.")
+                                   ;(let [editor (editor/create)]
                                    (let [editor (EditorPanel.)]
                                      (. tabs addTab utils/new-title editor)
                                      (. tabs setSelectedIndex (- (. tabs getTabCount) 1))

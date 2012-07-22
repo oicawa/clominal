@@ -2,8 +2,7 @@
   (:import (java.awt Font GraphicsEnvironment GridBagLayout)
            (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel)
            (javax.swing.text DefaultEditorKit)
-           ; (clominal.editors.StatusPanel)
-           )
+           (clominal.editors TextEditor ModeLine MiniBuffer))
   (:require [clominal.keys.keymap :as keymap]
             [clominal.action :as action]
             [clominal.utils.guiutils :as guiutils]
@@ -15,32 +14,32 @@
    :init init
    :post-init after-ctor
    :state state
-   :methods [[getStatusPanel [] javax.swing.JPanel]
-             [getCommandLine [] javax.swing.JTextField]
-             [getEditor [] javax.swing.JTextPane]]))
+   :methods [[getTextEditor [] clominal.editors.TextEditor]
+             [getModeLine [] clominal.editors.ModeLine]
+             [getMiniBuffer [] clominal.editors.MiniBuffer]]))
 
 
 (defn -init []
   [[]
-   (ref {:editor       (JTextPane.)
-         :status-panel (JPanel.)
-         :command-line (JTextField.)
+   (ref {:text-editor (TextEditor.)
+         :mode-line   (ModeLine.)
+         :mini-buffer (MiniBuffer.)
         })])
 
-(defn getEditor
+(defn getTextEditor
   [this]
-  (let [{:keys [editor status-panel command-line]} @(.state this)]
-    editor))
+  (let [{:keys [text-editor]} @(.state this)]
+    text-editor))
 
-(defn getStatusPanel
+(defn getModeLine
   [this]
-  (let [{:keys [editor status-panel command-line]} @(.state this)]
-    status-panel))
+  (let [{:keys [mode-line]} @(.state this)]
+    mode-line))
 
-(defn getCommandLine
+(defn getMiniBuffer
   [this]
-  (let [{:keys [editor status-panel command-line]} @(.state this)]
-    command-line))
+  (let [{:keys [mini-buffer]} @(.state this)]
+    mini-buffer))
 
 (def default-fonts {:linux   ["Takaoゴシック" Font/PLAIN 16]
                     :windows ["ＭＳ ゴシック" Font/PLAIN 14]})
@@ -50,21 +49,32 @@
 ;;
 (defn -after-ctor
   [this]
-  (let [{:keys [editor status-panel command-line]}
+  (let [{:keys [text-editor mode-line mini-buffer]}
                           @(.state this)
         map-vec           (@editorutils/ref-maps "default")
         default-inputmap  (map-vec 0)
         default-actionmap (map-vec 1)
-        scroll            (JScrollPane. editor JScrollPane/VERTICAL_SCROLLBAR_ALWAYS JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)]
+        scroll            (JScrollPane. text-editor JScrollPane/VERTICAL_SCROLLBAR_ALWAYS JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)]
 
-    (doto editor
+    (doto text-editor
+      (.setName "text-editor")
       (.setInputMap  JComponent/WHEN_FOCUSED default-inputmap)
       (.setActionMap default-actionmap)
-      (.enableInputMethods true))
+      (.enableInputMethods true)
+      (.setModeLine mode-line)
+      (.setMiniBuffer mini-buffer))
 
-    (doto command-line
-      (.setText "コマンドライン")
-      (.setName "command-line"))
+    (doto mode-line
+      ;(.setText "Mode Line")
+      (.setName "mode-line")
+      (.setTextEditor text-editor)
+      (.setMiniBuffer mini-buffer))
+
+    (doto mini-buffer
+      (.setText "Mini Buffer")
+      (.setName "mini-buffer")
+      (.setTextEditor text-editor)
+      (.setModeLine mode-line))
 
     (doto this
       (.setLayout (GridBagLayout.))
@@ -80,8 +90,8 @@
         :weightx 1.0
         :weighty 0.0
         :gridy 1
-        status-panel
+        mode-line
         :gridy 2
-        command-line))
-    (apply editorutils/set-font editor (default-fonts (env/get-os-keyword)))
-    ))
+        mini-buffer))
+    (apply editorutils/set-font text-editor (default-fonts (env/get-os-keyword)))
+    (apply editorutils/set-font mini-buffer (default-fonts (env/get-os-keyword)))))
