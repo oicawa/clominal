@@ -24,7 +24,6 @@
 ;; ------------------------------
 ;; Actions
 (defvar *add-tab* (action/create (fn [tabs]
-                                   ;(let [editor (editor/create)]
                                    (let [editor (EditorPanel.)]
                                      (. tabs addTab utils/new-title editor)
                                      (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
