@@ -6,7 +6,10 @@
             [clominal.utils.env :as env])
   (:import (java.awt Font GraphicsEnvironment GridBagLayout)
            (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel)
-           (javax.swing.text DefaultEditorKit)))
+           (javax.swing.text DefaultEditorKit)
+           (clominal.keys LastKeyAction)
+           (clominal.editors MiddleKeyAction)
+           ))
 
 ;;------------------------------
 ;;
@@ -36,6 +39,44 @@
     (keymap/create-operation ref-maps action)))
 
 
+(defn def-key-bind
+  "Define key bind for specified operation for one stroke or more, for EditorPanel."
+  [key-bind operation]
+  (let [ref-maps          (operation :ref-maps)
+        action            (operation :action)
+        default-maps      (@ref-maps "default")
+        default-inputmap  (default-maps 0)
+        default-actionmap (default-maps 1)
+        all-strokes       (keymap/get-key-strokes key-bind)]
+    (if (seq? all-strokes)
+        (loop [inputmap    default-inputmap
+               actionmap   default-actionmap
+               stroke      (first all-strokes)
+               strokes     (rest all-strokes)]
+          (let [stroke-name (str stroke)]
+            (if (= nil (first strokes))
+                (do
+                  (. inputmap  put stroke stroke-name)
+                  (. actionmap put stroke-name (LastKeyAction. action default-inputmap default-actionmap)))
+                (let [map-vec        (keymap/get-maps ref-maps stroke-name)
+                      next-inputmap  (map-vec 0)
+                      next-actionmap (map-vec 1)
+                      ;middle-action  nil
+                      middle-action  (MiddleKeyAction. stroke next-inputmap next-actionmap)
+                      ]
+                  (. inputmap  put stroke stroke-name)
+                  (. actionmap put stroke-name middle-action)
+                  (recur next-inputmap next-actionmap (first strokes) (rest strokes))))))
+        (do
+          (. default-inputmap  put all-strokes (str all-strokes))
+          (. default-actionmap put (str all-strokes) action)
+          ;(print-maps (str all-strokes) default-inputmap default-actionmap)
+          ))))
+
+(defn print-keystroke
+  [keystroke]
+  (println (. keystroke getModifiers))
+  (println (. keystroke getKeyCode)))
 
 ;;------------------------------
 ;;
@@ -262,7 +303,8 @@
 (doseq [setting default-settings]
   (let [key-bind  (setting 0)
         operation (setting 1)]
-    (keymap/def-key-bind key-bind operation)))
+    ;(keymap/def-key-bind key-bind operation)
+    (def-key-bind key-bind operation)))
 
 
 
@@ -283,4 +325,11 @@
   [component name type size]
   (. component setFont (Font. name type size)))
 
+
+ ; (defn create-middle-action
+ ;   "Create new middle action that calls proc function."
+ ;  [proc]
+ ;  (proxy [AbstractAction] []
+ ;    (actionPerformed [evt]
+ ;      (proc (. evt getSource)))))
 

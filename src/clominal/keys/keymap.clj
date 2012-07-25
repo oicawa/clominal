@@ -7,7 +7,7 @@
            (java.awt.event InputEvent KeyEvent)
            (clominal.keys LastKeyAction)))
 
-(defn- get-maps
+(defn get-maps
   "
   This function returns a vector constructed InputMap and ActionMap object from ref-map.
   If not found from the specified maps vector, it creates a new InputMap/ActionMap object, and add to ref-maps.
@@ -32,17 +32,13 @@
   [stroke-name inputmap actionmap]
   (println "  stroke name = " stroke-name)
   (println "  inputmap    = " inputmap)
-  ;(println "    keys      = " (map str (. inputmap keys)))
   (println "    keys:")
   (doseq [key (. inputmap keys)]
     (println "      " (str key)))
   (println "  actionmap   = " actionmap)
-  ;(println "    keys      = " (map str (. actionmap keys)))
-  ;(println "    keys      = " (. actionmap keys))
   (println "    keys:")
   (doseq [key (. actionmap keys)]
-    (println "      " (str key)))
-  )
+    (println "      " (str key))))
 
 
 (def windows-composition-enabled? (ref nil))
@@ -63,7 +59,7 @@
 ;       `(. ~component enableInputMethods ~flag)))
 (defn enable-inputmethod
   [component flag]
-  (println (format "enableInputMethods(%s)" flag))
+  ;(println (format "enableInputMethods(%s)" flag))
   (. component enableInputMethods flag))
 
         
@@ -83,6 +79,9 @@
         actionmap (map-vec 1)]
     (action/create #(let [component %1]
                       ;(enable-inputmethod component false)
+                      (let [mini-buffer (. component getMiniBuffer)]
+                        (. mini-buffer setText name)
+                        )
                       (SwingUtilities/invokeLater
                         (fn []
                           (doto component

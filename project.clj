@@ -7,5 +7,6 @@
         clominal.editors.MiniBuffer
         clominal.editors.ModeLine
         clominal.editors.TextEditor
+        clominal.editors.MiddleKeyAction
         clominal.editors.EditorPanel
         ])
