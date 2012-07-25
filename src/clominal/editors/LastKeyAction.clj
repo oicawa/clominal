@@ -20,11 +20,11 @@
   (let [{:keys    [action inputmap actionmap]} @(.state this)
         text-editor (. evt getSource)
         mini-buffer (. text-editor getMiniBuffer)]
-    (. action actionPerformed evt)
     (doto text-editor
       (.setEditable true)
       (.setInputMap JComponent/WHEN_FOCUSED inputmap)
       (.setActionMap actionmap))
     (doto mini-buffer
-      (.setText ""))))
+      (.setText ""))
+    (. action actionPerformed evt)))
 

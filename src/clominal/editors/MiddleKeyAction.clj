@@ -20,7 +20,6 @@
   (let [{:keys      [keystroke inputmap actionmap]} @(.state this)
         text-editor (. evt getSource)
         mini-buffer (. text-editor getMiniBuffer)]
-    (keymap/print-keystroke keystroke)
     (doto text-editor
       (.setEditable false)
       (.setInputMap JComponent/WHEN_FOCUSED inputmap)

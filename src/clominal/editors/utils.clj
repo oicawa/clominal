@@ -238,21 +238,19 @@
 
 (defvar openFile
   (create-editor-operation
-    (fn [editor]
+    (fn [text-editor]
       (println "called 'openFile'.")
-      (let [tab (.. editor getParent getParent getParent getParent)
-            components (. tab getComponents)]
-        (doseq [component components]
-          (println (. component getName))))
-      ))
+      (let [mini-buffer (. text-editor getMiniBuffer)]
+        (. mini-buffer setText "Find file: ~/data/programs/...")))) 
   "ファイルをオープンします。")
 
 (defvar saveFile
   (create-editor-operation
-    (fn [editor]
-      (println "called 'saveFile'.")
-      (println "----------")
-      (println (.. editor getText))))
+    (fn [text-editor]
+      (let [mini-buffer (. text-editor getMiniBuffer)]
+        (println "called 'saveFile'.")
+        (println "----------")
+        (println (.. text-editor getText)))))
   "ファイルを保存します。")
 
 (defvar changeBuffer
