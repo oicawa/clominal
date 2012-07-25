@@ -72,11 +72,6 @@
           ;(print-maps (str all-strokes) default-inputmap default-actionmap)
           ))))
 
-(defn print-keystroke
-  [keystroke]
-  (println (. keystroke getModifiers))
-  (println (. keystroke getKeyCode)))
-
 ;;------------------------------
 ;;
 ;; Editor actions
@@ -236,8 +231,6 @@
   "エディタを読み込み専用モードに設定する処理の名前です。")
 (defvar writable (create-editor-operation DefaultEditorKit/writableAction)
   "エディタを書き込み可能モードに設定する処理の名前です。")
-(defvar defaultKeyTyped (create-editor-operation DefaultEditorKit/defaultKeyTypedAction)
-  "キー入力イベントを受け取ったとき、キーマップエントリがない場合にデフォルトで実行される処理の名前です。")
 
 ;;
 ;; File action group.
@@ -297,6 +290,8 @@
    '((Ctrl \x) (Ctrl \f)) openFile
    '((Ctrl \x) (Ctrl \s)) saveFile
    '((Ctrl \x) \b) changeBuffer
+   '((Ctrl \x) (Alt \a) \s) selectAll
+   '((Ctrl Alt \a) \s) selectAll
   })
 
 (doseq [setting default-settings]

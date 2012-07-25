@@ -143,4 +143,21 @@
         (list? (first key-binds)) (map get-key-stroke key-binds)
         true (get-key-stroke key-binds)))
 
+(defn str-keystroke
+  [keystroke]
+  (let [mod (KeyEvent/getKeyModifiersText (. keystroke getModifiers))
+        key (KeyEvent/getKeyText (. keystroke getKeyCode))]
+    (str mod "+" key)))
+
+(defn print-keystroke
+  [keystroke]
+  (let [mod (. keystroke getModifiers)
+        key (. keystroke getKeyCode)]
+    (println "----------")
+    (println "Ctrl =" InputEvent/CTRL_DOWN_MASK)
+    (println "Alt  =" InputEvent/ALT_DOWN_MASK)
+    (println "Modifiers Value =" mod)
+    (println "Modifiers Text  =" (KeyEvent/getKeyModifiersText mod))
+    (println "KeyCode         =" key)
+    (println "KeyText         =" (KeyEvent/getKeyText key))))
 

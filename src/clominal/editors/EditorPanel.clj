@@ -71,7 +71,7 @@
       (.setMiniBuffer mini-buffer))
 
     (doto mini-buffer
-      (.setText "Mini Buffer")
+      (.setText "")
       (.setName "mini-buffer")
       (.setTextEditor text-editor)
       (.setModeLine mode-line))
