@@ -4,8 +4,7 @@
             [clominal.utils.env :as env])
   (:import (javax.swing InputMap ActionMap JComponent KeyStroke SwingUtilities)
            (java.awt Toolkit)
-           (java.awt.event InputEvent KeyEvent)
-           (clominal.keys LastKeyAction)))
+           (java.awt.event InputEvent KeyEvent)))
 
 (defn get-maps
   "
@@ -64,32 +63,6 @@
 
         
 
-(defn create-middle-keystroke-action
-  "
-  This function creates an action for the specified middle keystroke.
-  The created action must assign the appropriate InputMap object and ActionMap object to current editor.
-  
-  ref-maps : A 'ref' map object (key:key bind name, value:InputMap/ActionMap vector) of the target component.
-  name     : Key bind name.
-  return: nil
-  "
-  [ref-maps name]
-  (let [map-vec   (get-maps ref-maps name)
-        inputmap  (map-vec 0)
-        actionmap (map-vec 1)]
-    (action/create #(let [component %1]
-                      ;(enable-inputmethod component false)
-                      (let [mini-buffer (. component getMiniBuffer)]
-                        (. mini-buffer setText name)
-                        )
-                      (SwingUtilities/invokeLater
-                        (fn []
-                          (doto component
-                            (.setEditable false)
-                            (.setInputMap  JComponent/WHEN_FOCUSED inputmap)
-                            (.setActionMap actionmap))
-                          ; (println "isEditable =" (. component isEditable))
-                          ))))))
 
 (defn create-operation
   "
@@ -171,39 +144,3 @@
         true (get-key-stroke key-binds)))
 
 
-(defn def-key-bind
-  "Define key bind for specified operation for one stroke or more."
-  [key-bind operation]
-  (let [ref-maps          (operation :ref-maps)
-        action            (operation :action)
-        default-maps      (@ref-maps "default")
-        default-inputmap  (default-maps 0)
-        default-actionmap (default-maps 1)
-        all-strokes       (get-key-strokes key-bind)]
-    ;(println "----------")
-    ;(println "all-strokes = " all-strokes)
-    (if (seq? all-strokes)
-        (loop [inputmap    default-inputmap
-               actionmap   default-actionmap
-               stroke      (first all-strokes)
-               strokes     (rest all-strokes)]
-          (let [stroke-name (str stroke)]
-            (if (= nil (first strokes))
-                (do
-                  (. inputmap  put stroke stroke-name)
-                  (. actionmap put stroke-name (LastKeyAction. action default-inputmap default-actionmap))
-                  ;(print-maps stroke-name inputmap actionmap)
-                  )
-                (let [map-vec        (get-maps ref-maps stroke-name)
-                      next-inputmap  (map-vec 0)
-                      next-actionmap (map-vec 1)
-                      middle-action  (create-middle-keystroke-action ref-maps stroke-name)]
-                  (. inputmap  put stroke stroke-name)
-                  (. actionmap put stroke-name middle-action)
-                  ;(print-maps stroke-name inputmap actionmap)
-                  (recur next-inputmap next-actionmap (first strokes) (rest strokes))))))
-        (do
-          (. default-inputmap  put all-strokes (str all-strokes))
-          (. default-actionmap put (str all-strokes) action)
-          ;(print-maps (str all-strokes) default-inputmap default-actionmap)
-          ))))

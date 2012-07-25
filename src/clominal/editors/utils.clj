@@ -7,8 +7,7 @@
   (:import (java.awt Font GraphicsEnvironment GridBagLayout)
            (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel)
            (javax.swing.text DefaultEditorKit)
-           (clominal.keys LastKeyAction)
-           (clominal.editors MiddleKeyAction)
+           (clominal.editors MiddleKeyAction LastKeyAction)
            ))
 
 ;;------------------------------
@@ -325,11 +324,4 @@
   [component name type size]
   (. component setFont (Font. name type size)))
 
-
- ; (defn create-middle-action
- ;   "Create new middle action that calls proc function."
- ;  [proc]
- ;  (proxy [AbstractAction] []
- ;    (actionPerformed [evt]
- ;      (proc (. evt getSource)))))
 
