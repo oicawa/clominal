@@ -7,7 +7,7 @@
   (:import (java.awt Font GraphicsEnvironment GridBagLayout)
            (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel)
            (javax.swing.text DefaultEditorKit)
-           (clominal.editors MiddleKeyAction LastKeyAction)
+           (clominal.editors MiddleKeyAction LastKeyAction AskMiniBufferAction)
            ))
 
 ;;------------------------------
@@ -36,6 +36,16 @@
                      (instance? Action src-info) src-info
                      (fn? src-info) (action/create src-info))]
     (keymap/create-operation ref-maps action)))
+
+(defn create-mini-buffer-operation
+  "Create operation for mini-buffer."
+  [caption default-value src-info]
+  (let [default-actionmap ((@ref-maps "default") 1)
+        action (cond (string? src-info) (. default-actionmap get src-info)
+                     (instance? Action src-info) src-info
+                     (fn? src-info) (AskMiniBufferAction. (action/create src-info) caption default-value))]
+    (keymap/create-operation ref-maps action)))
+
 
 
 (defn def-key-bind
@@ -237,11 +247,13 @@
 ;;
 
 (defvar openFile
-  (create-editor-operation
-    (fn [text-editor]
-      (println "called 'openFile'.")
-      (let [mini-buffer (. text-editor getMiniBuffer)]
-        (. mini-buffer setText "Find file: ~/data/programs/...")))) 
+  (create-mini-buffer-operation
+    "Find file:"
+    "~/"
+    (fn [mini-buffer]
+      (let [text-editor (. mini-buffer getTextEditor)
+            path (. mini-buffer text)]
+        (. text-editor setText path))))
   "ファイルをオープンします。")
 
 (defvar saveFile
@@ -315,6 +327,17 @@
 
 (defn set-font
   [component name type size]
+  (println "Called clominal.editors.utils/set-font by " name "," type "," size)
   (. component setFont (Font. name type size)))
+
+(defn printSize
+  [component name]
+  (let [psize  (. component getPreferredSize)
+        pheight (. psize getHeight)
+        pwidth  (. psize getWidth)
+        size   (. component getSize)
+        height (. size getHeight)
+        width  (. size getWidth)]
+    (println name " preferred:[" pwidth "," pheight "], normal:[" width "," height "]")))
 
 

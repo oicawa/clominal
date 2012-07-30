@@ -9,8 +9,8 @@
    :state state
    :methods [[getModeLine [] javax.swing.JPanel]
              [setModeLine [javax.swing.JPanel] void]
-             [getMiniBuffer [] javax.swing.JTextField]
-             [setMiniBuffer [javax.swing.JTextField] void]]))
+             [getMiniBuffer [] javax.swing.JPanel]
+             [setMiniBuffer [javax.swing.JPanel] void]]))
 
 
 (defn -init []
@@ -34,7 +34,7 @@
     @mini-buffer))
 
 (defn -setMiniBuffer
-  [this mini-buffer-text]
+  [this mini-buffer-panel]
   (let [{:keys [mini-buffer]} @(.state this)]
-    (dosync (ref-set mini-buffer mini-buffer-text))))
+    (dosync (ref-set mini-buffer mini-buffer-panel))))
 

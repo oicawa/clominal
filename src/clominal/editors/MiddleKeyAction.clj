@@ -25,5 +25,5 @@
       (.setInputMap JComponent/WHEN_FOCUSED inputmap)
       (.setActionMap actionmap))
     (doto mini-buffer
-      (.setText (str (. mini-buffer getText) (keymap/str-keystroke keystroke) ", ")))))
+      (.prompt (str (. mini-buffer prompt) (keymap/str-keystroke keystroke) ", ")))))
 

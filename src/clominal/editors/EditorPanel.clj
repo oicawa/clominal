@@ -41,7 +41,7 @@
   (let [{:keys [mini-buffer]} @(.state this)]
     mini-buffer))
 
-(def default-fonts {:linux   ["Takaoゴシック" Font/PLAIN 16]
+(def default-fonts {:linux   ["Takaoゴシック" Font/PLAIN 14]
                     :windows ["ＭＳ ゴシック" Font/PLAIN 14]})
 
 ;;
@@ -65,13 +65,12 @@
       (.setMiniBuffer mini-buffer))
 
     (doto mode-line
-      ;(.setText "Mode Line")
       (.setName "mode-line")
       (.setTextEditor text-editor)
       (.setMiniBuffer mini-buffer))
 
     (doto mini-buffer
-      (.setText "")
+      (.prompt "")
       (.setName "mini-buffer")
       (.setTextEditor text-editor)
       (.setModeLine mode-line))
@@ -94,4 +93,6 @@
         :gridy 2
         mini-buffer))
     (apply editorutils/set-font text-editor (default-fonts (env/get-os-keyword)))
-    (apply editorutils/set-font mini-buffer (default-fonts (env/get-os-keyword)))))
+    (apply editorutils/set-font mode-line   (default-fonts (env/get-os-keyword)))
+    (apply editorutils/set-font mini-buffer (default-fonts (env/get-os-keyword)))
+))

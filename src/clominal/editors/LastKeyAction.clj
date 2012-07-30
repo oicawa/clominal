@@ -25,6 +25,6 @@
       (.setInputMap JComponent/WHEN_FOCUSED inputmap)
       (.setActionMap actionmap))
     (doto mini-buffer
-      (.setText ""))
+      (.prompt ""))
     (. action actionPerformed evt)))
 

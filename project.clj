@@ -4,6 +4,7 @@
                  [org.clojure/clojure-contrib "1.2.0"]]
   :main clominal.core
   :aot [clominal.editors.MiniBuffer
+        clominal.editors.AskMiniBufferAction
         clominal.editors.ModeLine
         clominal.editors.TextEditor
         clominal.editors.MiddleKeyAction
