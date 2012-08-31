@@ -3,8 +3,9 @@
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]]
   :main clominal.core
-  :aot [clominal.editors.MiniBuffer
+  :aot [clominal.editors.MiniBufferAction
         clominal.editors.AskMiniBufferAction
+        clominal.editors.MiniBuffer
         clominal.editors.ModeLine
         clominal.editors.TextEditor
         clominal.editors.MiddleKeyAction

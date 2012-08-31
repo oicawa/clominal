@@ -1,7 +1,8 @@
 (ns clominal.editors.MiniBuffer
   (:import (java.awt Font Color GraphicsEnvironment GridBagLayout)
-           (javax.swing JPanel JLabel JTextField SwingConstants)
-           (javax.swing.border LineBorder))
+           (javax.swing JPanel JLabel JTextField SwingConstants JComponent)
+           (javax.swing.border LineBorder)
+           (clominal.editors.MiniBufferAction))
   (:require [clominal.utils.guiutils :as guiutils])
   (:gen-class
    :extends javax.swing.JPanel
@@ -19,6 +20,8 @@
              [enable [Boolean] void]
              [enable [] Boolean]
              [setBackgroundColor [java.awt.Color] void]
+             [setAction [clominal.editors.MiniBufferAction] void]
+             [removeActions [] void]
              ]))
 
 
@@ -100,6 +103,32 @@
         (. input-line setBackgroundColor color)
         (. filler setBackgroundColor color))))
 
+(defn -getInputMap
+  [this]
+  (let [{:keys [input-line]} @(.state this)]
+    (. input-line getInputMap JComponent/WHEN_FOCUSED)))
+
+(defn -getActionMap
+  [this]
+  (let [{:keys [input-line]} @(.state this)]
+    (. input-line getActionMap)))
+
+(defn -setAction
+  [this action]
+  (let [{:keys [input-line]} @(.state this)]
+    (. this removeActions)
+    (. input-line addActionListener action)))
+
+(defn -removeActions
+  [this]
+  (let [{:keys [input-line]} @(.state this)]
+    (println "---[START] remove ActionListeners ---")
+    (doseq [registed-action (. input-line getActionListeners)]
+      (println registed-action)
+      (. input-line removeActionListener registed-action))
+    (println "---[ END ] remove ActionListeners ---")))
+    
+  
 (defn -after-ctor
   [this]
   (let [{:keys [prompt input-line filler]} @(.state this)]
@@ -127,5 +156,6 @@
     (doto input-line
       (.setVisible false))
     (doto filler
+      (.setText " ")
       (.setVisible true))
   ))

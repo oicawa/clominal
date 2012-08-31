@@ -7,5 +7,5 @@
   [proc]
   (proxy [AbstractAction] []
     (actionPerformed [evt]
-      (proc (. evt getSource)))))
+      (proc evt (. evt getSource)))))
 

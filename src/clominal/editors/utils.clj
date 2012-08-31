@@ -16,11 +16,10 @@
 ;;
 ;;------------------------------
 
-(def ref-maps (ref {"default" (let [editor (JTextPane.)]
-                                [(. editor getInputMap JComponent/WHEN_FOCUSED)
-                                 (. editor getActionMap)])}))
-
-
+(def ref-maps
+  (ref {"default" (let [editor (JTextPane.)]
+                    [(. editor getInputMap JComponent/WHEN_FOCUSED)
+                     (. editor getActionMap)])}))
 
 ;;------------------------------
 ;;
@@ -36,17 +35,6 @@
                      (instance? Action src-info) src-info
                      (fn? src-info) (action/create src-info))]
     (keymap/create-operation ref-maps action)))
-
-(defn create-mini-buffer-operation
-  "Create operation for mini-buffer."
-  [caption default-value src-info]
-  (let [default-actionmap ((@ref-maps "default") 1)
-        action (cond (string? src-info) (. default-actionmap get src-info)
-                     (instance? Action src-info) src-info
-                     (fn? src-info) (AskMiniBufferAction. (action/create src-info) caption default-value))]
-    (keymap/create-operation ref-maps action)))
-
-
 
 (defn def-key-bind
   "Define key bind for specified operation for one stroke or more, for EditorPanel."
@@ -70,7 +58,6 @@
                 (let [map-vec        (keymap/get-maps ref-maps stroke-name)
                       next-inputmap  (map-vec 0)
                       next-actionmap (map-vec 1)
-                      ;middle-action  nil
                       middle-action  (MiddleKeyAction. stroke next-inputmap next-actionmap)
                       ]
                   (. inputmap  put stroke stroke-name)
@@ -79,7 +66,6 @@
         (do
           (. default-inputmap  put all-strokes (str all-strokes))
           (. default-actionmap put (str all-strokes) action)
-          ;(print-maps (str all-strokes) default-inputmap default-actionmap)
           ))))
 
 ;;------------------------------
@@ -247,30 +233,31 @@
 ;;
 
 (defvar openFile
-  (create-mini-buffer-operation
-    "Find file:"
-    "~/"
-    (fn [mini-buffer]
-      (let [text-editor (. mini-buffer getTextEditor)
-            path (. mini-buffer text)]
-        (. text-editor setText path))))
-  "ファイルをオープンします。")
+  (create-editor-operation
+    (AskMiniBufferAction. 
+      "Find file:"
+      "~/"
+      (fn [evt mini-buffer text-editor]
+        (let [path (. mini-buffer text)]
+          (. text-editor openFile path)))))
+  "ファイルを開きます。")
 
 (defvar saveFile
   (create-editor-operation
-    (fn [text-editor]
-      (let [mini-buffer (. text-editor getMiniBuffer)]
-        (println "called 'saveFile'.")
-        (println "----------")
-        (println (.. text-editor getText)))))
+    (fn [evt text-editor]
+      (let [currentPath (. text-editor currentPath)
+            mini-buffer (. text-editor getMiniBuffer)]
+        (if (= currentPath nil)
+            (. text-editor saveAsFile evt)
+            (. text-editor saveFile)))))
   "ファイルを保存します。")
 
 (defvar changeBuffer
   (create-editor-operation
-    (fn [editor]
+    (fn [evt text-editor]
       (println "called 'changeBuffer'.")))
   "表示するバッファを変更します。")
-          
+
 
 
 ;;------------------------------
@@ -307,7 +294,6 @@
 (doseq [setting default-settings]
   (let [key-bind  (setting 0)
         operation (setting 1)]
-    ;(keymap/def-key-bind key-bind operation)
     (def-key-bind key-bind operation)))
 
 

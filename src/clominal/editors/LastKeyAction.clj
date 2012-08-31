@@ -17,7 +17,7 @@
 
 (defn -actionPerformed
   [this evt]
-  (let [{:keys    [action inputmap actionmap]} @(.state this)
+  (let [{:keys [action inputmap actionmap]} @(.state this)
         text-editor (. evt getSource)
         mini-buffer (. text-editor getMiniBuffer)]
     (doto text-editor
