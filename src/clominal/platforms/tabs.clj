@@ -27,7 +27,7 @@
                                    (let [editor (EditorPanel.)]
                                      (. tabs addTab utils/new-title editor)
                                      (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
-                                     (. editor requestFocusInWindow)))))
+                                     (.. editor getTextEditor requestFocusInWindow)))))
 
 (defvar *remove-tab* (action/create (fn [evt tabs]
                                       (let [index (. tabs getSelectedIndex)]

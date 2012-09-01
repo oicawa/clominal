@@ -26,17 +26,17 @@
          :mini-buffer (MiniBuffer.)
         })])
 
-(defn getTextEditor
+(defn -getTextEditor
   [this]
   (let [{:keys [text-editor]} @(.state this)]
     text-editor))
 
-(defn getModeLine
+(defn -getModeLine
   [this]
   (let [{:keys [mode-line]} @(.state this)]
     mode-line))
 
-(defn getMiniBuffer
+(defn -getMiniBuffer
   [this]
   (let [{:keys [mini-buffer]} @(.state this)]
     mini-buffer))
