@@ -27,11 +27,14 @@
 
 (defn -init []
   [[]
-   (ref {:text-editor (ref nil)
-         :mode-line   (ref nil)
-         :prompt      (JLabel.)
-         :input-line  (JTextField.)
-         :filler      (JLabel. " ")})])
+   (let [input-line (JTextField.)
+         border     (LineBorder. Color/WHITE 2)]
+     (. input-line setBorder border)
+     (ref {:text-editor (ref nil)
+           :mode-line   (ref nil)
+           :prompt      (JLabel.)
+           :input-line  input-line
+           :filler      (JLabel. " ")}))])
 
 (defn -getTextEditor
   [this]
@@ -72,16 +75,16 @@
 (defn -enable
   ([this]
    (let [{:keys [input-line filler]} @(.state this)]
-     (and (. input-line getVisible)
+     (and (. input-line getEditable)
           (not (. filler getVisible)))))
   ([this value]
-   (let [{:keys [input-line filler]} @(.state this)]
+   (let [{:keys [input-line filler enable-border disable-border]} @(.state this)]
      (doto filler
        (.setVisible (not value)))
      (doto input-line
-       (.setVisible value)
-       (.requestFocusInWindow))
-     )))
+       (.setEditable value)
+       (.setFocusable value)
+       (.requestFocusInWindow)))))
 
 (defn -setFont
   [this font]
@@ -122,16 +125,17 @@
 (defn -removeActions
   [this]
   (let [{:keys [input-line]} @(.state this)]
-    (println "---[START] remove ActionListeners ---")
+    ;(println "---[START] remove ActionListeners ---")
     (doseq [registed-action (. input-line getActionListeners)]
-      (println registed-action)
+      ;(println registed-action)
       (. input-line removeActionListener registed-action))
-    (println "---[ END ] remove ActionListeners ---")))
+    ;(println "---[ END ] remove ActionListeners ---")
+    ))
     
   
 (defn -after-ctor
   [this]
-  (let [{:keys [prompt input-line filler]} @(.state this)]
+  (let [{:keys [prompt input-line filler disable-border]} @(.state this)]
     (doto this
       (.setBorder (LineBorder. Color/GRAY 1))
       (.setPreferredSize nil)
@@ -154,7 +158,8 @@
       (.setText "Prompt...")
       (.setHorizontalAlignment SwingConstants/LEFT))
     (doto input-line
-      (.setVisible false))
+      (.setEditable false)
+      (.setFocusable false))
     (doto filler
       (.setText " ")
       (.setVisible true))

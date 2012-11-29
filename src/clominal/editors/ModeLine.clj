@@ -11,7 +11,8 @@
    :methods [[getTextEditor [] javax.swing.JTextPane]
              [setTextEditor [javax.swing.JTextPane] void]
              [getMiniBuffer [] javax.swing.JPanel]
-             [setMiniBuffer [javax.swing.JPanel] void]]))
+             [setMiniBuffer [javax.swing.JPanel] void]
+             [getFileNameLabel [] javax.swing.JLabel]]))
 
 
 (defn -init []
@@ -67,6 +68,11 @@
         ;   (. filler setPreferredSize (java.awt.Dimension. width height)))
         (println "Completed ModeLine/setFont.")
          )))
+
+(defn -getFileNameLabel
+  [this]
+  (let [{:keys [file-name]} @(.state this)]
+    file-name))
 
 (defn -after-ctor
   [this]
