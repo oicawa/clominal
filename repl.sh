@@ -11,4 +11,4 @@ ${SRC_PATH}:\
 ${CLS_PATH}:\
 ${LIB_PATH}/clojure-1.4.0.jar:\
 ${LIB_PATH}/clojure-contrib-1.2.0.jar \
-clojure.main -r ${SRC_PATH}/clominal/core.clj
+clojure.main -i ${SRC_PATH}/clominal/core.clj

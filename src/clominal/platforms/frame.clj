@@ -18,10 +18,10 @@
       (.add tabs/*tabs*)
       (.setIconImage (. (ImageIcon. "./resources/clojure-icon.gif") getImage)))))
 
-(def *frame* "'clominal' main frame.")
+(def ^:dynamic *frame* "'clominal' main frame.")
 
 (defn assign
   [mode]
-  (def *frame* (create mode)))
+  (def ^:dynamic *frame* (create mode)))
 
 
