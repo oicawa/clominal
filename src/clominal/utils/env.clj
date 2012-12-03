@@ -1,6 +1,7 @@
 (ns clominal.utils.env
   (:require [clojure.contrib.string :as string])
-  (:import (java.io File)))
+  (:import (java.io File)
+           (java.util.regex Pattern)))
 
 (defn windows?
   []
@@ -15,13 +16,13 @@
                         os-raw-name)]
     (keyword os-name)))
 
-(def file-separator (System/getProperty "file.separator"))
+(def os-file-separator (System/getProperty "file.separator"))
 
 (defn get-absolute-path
   [path]
-  (let [fields (seq (. path split file-separator))
+  (let [fields (seq (. path split (Pattern/quote os-file-separator)))
         head   (first fields)
         body   (rest fields)]
     (if (= head "~")
-        (string/join file-separator (cons (System/getenv "HOME") body))
+        (string/join os-file-separator (cons (System/getProperty "user.home") body))
         (. (File. path) getAbsolutePath))))

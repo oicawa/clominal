@@ -21,8 +21,8 @@
          :mini-buffer (ref nil)
          :char-code   (JLabel. "--")
          :separator   (JLabel. ":")
-         :modified?   (JLabel. "--")
-         :file-name   (JLabel. "Dummy.txt")
+         :modified?   (JLabel. "**-")
+         :file-name   (JLabel. "(New)")
          :cursor      (JLabel. "[L12, C34]")
          :filler      (JLabel. "")})])
 
@@ -48,7 +48,6 @@
 
 (defn -setFont
   [this font]
-  (println "Called ModeLine/setFont.")
   (if (= nil (.state this))
       nil
       (let [{:keys [char-code
@@ -63,10 +62,6 @@
         (. file-name setFont font)
         (. cursor setFont font)
         (. filler setFont font)
-        ; (let [height (.. input-line getPreferredSize getHeight)
-        ;       width  (.. prompt getPreferredSize getWidth)]
-        ;   (. filler setPreferredSize (java.awt.Dimension. width height)))
-        (println "Completed ModeLine/setFont.")
          )))
 
 (defn -getFileNameLabel
@@ -85,7 +80,6 @@
     (doseq [cmp [char-code separator modified? file-name cursor filler]]
       (println (. cmp getText)))
     (doto this
-      ;(.setBorder (LineBorder. Color/GRAY 2))
       (.setPreferredSize nil)
       (.setLayout (GridBagLayout.))
       (guiutils/grid-bag-layout

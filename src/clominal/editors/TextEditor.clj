@@ -80,10 +80,12 @@
   [this evt]
   (let [saveAsAction (AskMiniBufferAction. 
                        "Save as:"
-                       "~/"
+                       (str "~" env/os-file-separator)
                        (fn [evt mini-buffer text-editor]
                          (let [path (. mini-buffer text)]
-                           (. text-editor saveFile path))))]
+                           (println "Save as:" path)
+                           (. text-editor currentPath path)
+                           (. text-editor saveFile))))]
     (. saveAsAction actionPerformed evt)))
 
 (defn -openFile

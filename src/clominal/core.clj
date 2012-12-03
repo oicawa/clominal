@@ -14,9 +14,7 @@
   (:require [clominal.action :as action]
             [clominal.keys.keymap :as keymap]
             [clominal.platforms.frame :as frame])
-  (:import (javax.swing SwingUtilities))
-  ;(:gen-class)
-  )
+  (:import (javax.swing SwingUtilities)))
 
 (defn main [& args]
   (SwingUtilities/invokeLater

@@ -236,7 +236,7 @@
   (create-editor-operation
     (AskMiniBufferAction. 
       "Find file:"
-      "~/"
+      (str "~" env/os-file-separator)
       (fn [evt mini-buffer text-editor]
         (let [path (. mini-buffer text)]
           (. text-editor openFile path)))))
