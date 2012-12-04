@@ -78,7 +78,8 @@
 
 (def mask-keys
   {'Ctrl  InputEvent/CTRL_DOWN_MASK
-   'Alt   InputEvent/ALT_DOWN_MASK})
+   'Alt   InputEvent/ALT_DOWN_MASK
+   'Shift InputEvent/SHIFT_DOWN_MASK})
 
 (def normal-keys
   {\a KeyEvent/VK_A

@@ -6,7 +6,8 @@
             )
   (:import (javax.swing JComponent JTabbedPane JPanel JEditorPane KeyStroke AbstractAction)
            (java.awt.event InputEvent KeyEvent)
-           (clominal.editors EditorPanel)))
+           (clominal.editors EditorPanel)
+           ))
 
 ;; ------------------------------
 ;; TabbedPane
@@ -27,8 +28,6 @@
                                              (let [editor (EditorPanel.)
                                                    ;editor (editor/make-editor)
                                                    ]
-                                               (println (type editor))
-                                               ;(. editor initialize)
                                                (. tabs addTab utils/new-title editor)
                                                (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
                                                (.. editor getTextEditor requestFocusInWindow)))))

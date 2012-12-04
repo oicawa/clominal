@@ -5,7 +5,7 @@
             [clominal.utils.guiutils :as guiutils]
             [clominal.utils.env :as env])
   (:import (java.awt Font GraphicsEnvironment GridBagLayout)
-           (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel)
+           (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel JFileChooser)
            (javax.swing.text DefaultEditorKit)
            (clominal.editors MiddleKeyAction LastKeyAction AskMiniBufferAction)
            ))
@@ -234,22 +234,19 @@
 
 (defvar openFile
   (create-editor-operation
-    (AskMiniBufferAction. 
-      "Find file:"
-      (str "~" env/os-file-separator)
-      (fn [evt mini-buffer text-editor]
-        (let [path (. mini-buffer text)]
-          (. text-editor openFile path)))))
+    (fn [evt text-editor]
+      (let [chooser (JFileChooser. (str "~" env/os-file-separator))
+            result  (. chooser showOpenDialog nil)]
+        (if (= JFileChooser/APPROVE_OPTION result)
+            (. text-editor openFile (.. chooser getSelectedFile getAbsolutePath))))))
   "ファイルを開きます。")
 
 (defvar saveFile
   (create-editor-operation
     (fn [evt text-editor]
-      (let [currentPath (. text-editor currentPath)
-            mini-buffer (. text-editor getMiniBuffer)]
-        (if (= currentPath nil)
-            (. text-editor saveAsFile evt)
-            (. text-editor saveFile)))))
+      (if (= nil (. text-editor currentPath))
+          (. text-editor saveAsFile)
+          (. text-editor saveFile))))
   "ファイルを保存します。")
 
 (defvar changeBuffer
@@ -268,27 +265,29 @@
 
 (defvar- default-settings
   {
-   '(Ctrl \h) beginLine
-   '(Ctrl \j) backward
-   '(Ctrl \k) down
-   '(Ctrl \l) up
-   '(Ctrl \;) forward
-   '(Ctrl \:) endLine
+   '(Ctrl Shift \h) beginLine
+   '(Ctrl \h) backward
+   '(Ctrl \j) down
+   '(Ctrl \k) up
+   '(Ctrl \l) forward
+   '(Ctrl Shift \l) endLine
 
-   '(Alt \h) begin
-   '(Alt \j) previousWord
-   '(Alt \k) pageDown
-   '(Alt \l) pageUp
-   '(Alt \;) nextWord
-   '(Alt \:) end
+   '(Alt Shift \h) begin
+   '(Alt \h) previousWord
+   '(Alt \j) pageDown
+   '(Alt \k) pageUp
+   '(Alt \l) nextWord
+   '(Alt Shift \l) end
 
    '(Ctrl \b) deletePrevChar
    '(Ctrl \d) deleteNextChar
-   '((Ctrl \x) (Ctrl \f)) openFile
-   '((Ctrl \x) (Ctrl \s)) saveFile
-   '((Ctrl \x) \b) changeBuffer
-   '((Ctrl \x) (Alt \a) \s) selectAll
-   '((Ctrl Alt \a) \s) selectAll
+
+   ; '(Ctrl \c) copy
+   ; '(Ctrl \v) paste
+   ; '(Ctrl \x) cut
+   '(Ctrl \o) openFile
+   '(Ctrl \s) saveFile
+   '(Ctrl \a) selectAll
   })
 
 (doseq [setting default-settings]

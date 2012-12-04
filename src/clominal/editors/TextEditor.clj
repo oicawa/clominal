@@ -2,7 +2,7 @@
   (:import (java.awt Font GraphicsEnvironment GridBagLayout)
            (java.awt.event ActionEvent)
            (java.awt.im InputMethodRequests)
-           (javax.swing JTextPane JPanel JTextField JOptionPane)
+           (javax.swing JTextPane JPanel JTextField JOptionPane JFileChooser)
            (java.io File FileInputStream FileWriter FileNotFoundException)
            (clominal.editors AskMiniBufferAction))
   (:require [clominal.utils.guiutils :as guiutils]
@@ -22,9 +22,7 @@
              [save [String] boolean]
              [openFile [String] boolean]
              [saveFile [] boolean]
-             [saveAsFile [java.awt.event.ActionEvent] void]
-             ;[getCustomInputMethodRequests [] java.awt.im.InputMethodRequests]
-             ;[superGetInputMethodRequests [] java.awt.im.InputMethodRequests]
+             [saveAsFile [] void]
              ]))
 
 
@@ -77,16 +75,13 @@
       false)))
 
 (defn -saveAsFile
-  [this evt]
-  (let [saveAsAction (AskMiniBufferAction. 
-                       "Save as:"
-                       (str "~" env/os-file-separator)
-                       (fn [evt mini-buffer text-editor]
-                         (let [path (. mini-buffer text)]
-                           (println "Save as:" path)
-                           (. text-editor currentPath path)
-                           (. text-editor saveFile))))]
-    (. saveAsAction actionPerformed evt)))
+  [this]
+  (let [chooser (JFileChooser. (str "~" env/os-file-separator))
+        result  (. chooser showSaveDialog nil)]
+    (if (= JFileChooser/APPROVE_OPTION result)
+        (do
+          (. this currentPath (.. chooser getSelectedFile getAbsolutePath))
+          (. this saveFile)))))
 
 (defn -openFile
   [this file-path]
@@ -134,11 +129,8 @@
                                (println "called improved-imr's 'getSelectedText' method.")
                                (. original-imr getSelectedText attributes))
                              (getTextLocation [offset]
-                               (let [rect     (. original-imr getTextLocation offset)
-                                     position (.. editor getCaret getMagicCaretPosition)]
-                                 (println "X:" (. position getX) "/ Y:" (. position getY))
-                                 (. rect setLocation (. position getX) (. position getY))
-                                 rect)))
-              ]
+                               (let [rect (. original-imr getTextLocation offset)]
+                                 (. rect setLocation (- (. rect x) 10) (- (. rect y) 45))
+                                 rect)))]
           (dosync (ref-set im-requests improved-imr))
           improved-imr))))
