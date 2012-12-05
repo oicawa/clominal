@@ -31,6 +31,8 @@
         (. rect setLocation (- (. rect x) 10) (- (. rect y) 45))
         rect))))
 
+(definterface IEditor
+  (^javax.swing.JTextPane getTextPane []))
 
 (defn make-editor
   []
@@ -63,7 +65,8 @@
         ;
         ; Root Panel
         ;
-        root-panel    (JPanel.)
+        root-panel    (proxy [JPanel IEditor] []
+                        (^javax.swing.JTextPane getTextEditor [] text-editor))
 
         ;
         ; Others

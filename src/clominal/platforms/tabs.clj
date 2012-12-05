@@ -25,13 +25,13 @@
 ;; ------------------------------
 ;; Actions
 (defvar ^:dynamic *add-tab* (action/create (fn [evt tabs]
-                                             (let [editor (EditorPanel.)
-                                                   ;editor (editor/make-editor)
+                                             (let [;editor (EditorPanel.)
+                                                   editor (editor/make-editor)
                                                    ]
                                                (println (type editor))
                                                (. tabs addTab utils/new-title editor)
                                                (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
-                                               ;(.. editor getTextEditor requestFocusInWindow)
+                                               (. (. editor getTextEditor) requestFocusInWindow)
                                                ))))
 
 (defvar ^:dynamic *remove-tab* (action/create (fn [evt tabs]
