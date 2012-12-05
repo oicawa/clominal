@@ -77,8 +77,6 @@
                 file-name
                 cursor
                 filler]} @(.state this)]
-    (doseq [cmp [char-code separator modified? file-name cursor filler]]
-      (println (. cmp getText)))
     (doto this
       (.setPreferredSize nil)
       (.setLayout (GridBagLayout.))

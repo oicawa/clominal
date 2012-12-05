@@ -2,7 +2,7 @@
   (:use [clojure.contrib.def])
   (:require [clominal.action :as action]
             [clominal.editors.utils :as utils]
-            ;[clominal.editors.editor :as editor]
+            [clominal.editors.editor :as editor]
             )
   (:import (javax.swing JComponent JTabbedPane JPanel JEditorPane KeyStroke AbstractAction)
            (java.awt.event InputEvent KeyEvent)
@@ -28,9 +28,11 @@
                                              (let [editor (EditorPanel.)
                                                    ;editor (editor/make-editor)
                                                    ]
+                                               (println (type editor))
                                                (. tabs addTab utils/new-title editor)
                                                (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
-                                               (.. editor getTextEditor requestFocusInWindow)))))
+                                               ;(.. editor getTextEditor requestFocusInWindow)
+                                               ))))
 
 (defvar ^:dynamic *remove-tab* (action/create (fn [evt tabs]
                                                 (let [index (. tabs getSelectedIndex)]
