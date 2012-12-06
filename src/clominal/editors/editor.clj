@@ -2,7 +2,8 @@
   (:import (java.awt Font Color GraphicsEnvironment GridBagLayout)
            (java.awt.event ActionEvent)
            (java.awt.im InputMethodRequests)
-           (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action JLabel JTextField JPanel JOptionPane SwingConstants)
+           (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action
+                        JLabel JTextField JPanel JOptionPane SwingConstants JFileChooser)
            (javax.swing.border LineBorder)
            (javax.swing.event CaretListener)
            (java.io File FileInputStream FileWriter FileNotFoundException)
@@ -31,26 +32,27 @@
         (. rect setLocation (- (. rect x) 10) (- (. rect y) 45))
         rect))))
 
-(definterface IEditor
-  (^javax.swing.JTextPane getTextPane []))
+(definterface ITextPane
+  (getPath [])
+  (setPath [target])
+  (save [])
+  (saveAs [])
+  (open [target]))
+
+(defn count-by-pattern
+  [value pattern start end]
+  (loop [idx start
+         cnt 0]
+    (if (< end idx)
+        cnt
+        (let [new-idx (. value indexOf pattern idx)]
+          (if (< new-idx 0)
+              cnt
+              (recur (+ new-idx 1) (+ cnt 1)))))))
 
 (defn make-editor
   []
   (let [;
-        ; Text Editor
-        ;
-        improved-imr (atom nil)
-        text-editor  (proxy [JTextPane] []
-                       (getInputMethodRequests []
-                         (if (= nil @improved-imr)
-                             (let [original-imr (proxy-super getInputMethodRequests)]
-                               (reset! improved-imr (make-improved-imr original-imr))
-                               @improved-imr)
-                             @improved-imr)))
-        scroll       (JScrollPane. text-editor
-                                   JScrollPane/VERTICAL_SCROLLBAR_ALWAYS
-                                   JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)
-        ;
         ; Status Bar
         ;
         statusbar     (JPanel.)
@@ -63,11 +65,67 @@
         filler        (JLabel. "")
         
         ;
+        ; Text Editor
+        ;
+        file-path    (atom nil)
+        improved-imr (atom nil)
+        text-pane    (proxy [JTextPane ITextPane] []
+                       (getPath []
+                         @file-path)
+                       (setPath [path]
+                         (let [full-path (env/get-absolute-path path)]
+                           (dosync (reset! file-path full-path))))
+                       (save
+                         []
+                         (try
+                           (with-open [stream (FileWriter. @file-path)]
+                             (do
+                               (. this write stream)
+                               true))
+                           (catch Exception e
+                             (. e printStackTrace)
+                             (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION))
+                             false)))
+                       (saveAs
+                         []
+                         (let [chooser (JFileChooser. (str "~" env/os-file-separator))
+                               result  (. chooser showSaveDialog nil)]
+                           (if (= JFileChooser/APPROVE_OPTION result)
+                               (do
+                                 (. this setPath (.. chooser getSelectedFile getAbsolutePath))
+                                 (. this save)))))
+                       (open
+                         [target]
+                         (let [doc  (. this getDocument)
+                               kit  (. this getEditorKit)
+                               file (File. target)]
+                           (do
+                             (reset! file-path target)
+                             (try
+                               (with-open [stream (FileInputStream. @file-path)]
+                                 (do
+                                   (. this read stream doc)
+                                   (. file-name setText (. file getName))
+                                   true))
+                               (catch FileNotFoundException _ true)
+                               (catch Exception e
+                                 (. e printStackTrace)
+                                 (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION)))))))
+                       (getInputMethodRequests []
+                         (if (= nil @improved-imr)
+                             (let [original-imr (proxy-super getInputMethodRequests)]
+                               (reset! improved-imr (make-improved-imr original-imr))
+                               @improved-imr)
+                             @improved-imr)))
+        scroll       (JScrollPane. text-pane
+                                   JScrollPane/VERTICAL_SCROLLBAR_ALWAYS
+                                   JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)
+        ;
         ; Root Panel
         ;
-        root-panel    (proxy [JPanel IEditor] []
-                        (^javax.swing.JTextPane getTextEditor [] text-editor))
-
+        root-panel   (proxy [JPanel] []
+                       (requestFocusInWindow []
+                         (. text-pane requestFocusInWindow)))
         ;
         ; Others
         ;
@@ -80,8 +138,8 @@
     ;
     ; Editor Area
     ;
-    (doto text-editor
-      (.setName "text-editor")
+    (doto text-pane
+      (.setName "text-pane")
       (.setInputMap  JComponent/WHEN_FOCUSED default-inputmap)
       (.setActionMap default-actionmap)
       (.enableInputMethods true)
@@ -89,9 +147,11 @@
                            (caretUpdate [evt]
                              (let [src (. evt getSource)
                                    crt (. src getCaret)
-                                   pos (. crt getMagicCaretPosition)]
-                               (println "pos:" pos)
-                               (. cursor setText (format cursor-format (. pos x) (. pos y))))))))
+                                   val (. src getText)
+                                   dot (. crt getDot)
+                                   row (count-by-pattern val "\n" 0 dot)
+                                   clm (- dot (. val lastIndexOf "\n" dot))]
+                               (. cursor setText (format cursor-format row clm)))))))
 
     ;
     ; StatusBar
@@ -135,7 +195,8 @@
         :weighty 0.0
         :gridy 1
         statusbar))
-    (apply editorutils/set-font text-editor (default-fonts (env/get-os-keyword)))
-    (apply editorutils/set-font statusbar   (default-fonts (env/get-os-keyword)))
+    (doseq [component [text-pane char-code separator modified? file-name cursor]]
+      (editorutils/set-font component (default-fonts (env/get-os-keyword))))
+
     root-panel
     ))

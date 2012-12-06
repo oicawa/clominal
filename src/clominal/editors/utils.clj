@@ -234,24 +234,24 @@
 
 (defvar openFile
   (create-editor-operation
-    (fn [evt text-editor]
+    (fn [evt text-pane]
       (let [chooser (JFileChooser. (str "~" env/os-file-separator))
             result  (. chooser showOpenDialog nil)]
         (if (= JFileChooser/APPROVE_OPTION result)
-            (. text-editor openFile (.. chooser getSelectedFile getAbsolutePath))))))
+            (. text-pane open (.. chooser getSelectedFile getAbsolutePath))))))
   "ファイルを開きます。")
 
 (defvar saveFile
   (create-editor-operation
-    (fn [evt text-editor]
-      (if (= nil (. text-editor currentPath))
-          (. text-editor saveAsFile)
-          (. text-editor saveFile))))
+    (fn [evt text-pane]
+      (if (= nil (. text-pane getPath))
+          (. text-pane saveAs)
+          (. text-pane save))))
   "ファイルを保存します。")
 
 (defvar changeBuffer
   (create-editor-operation
-    (fn [evt text-editor]
+    (fn [evt text-pane]
       (println "called 'changeBuffer'.")))
   "表示するバッファを変更します。")
 
@@ -311,9 +311,11 @@
     (println font)))
 
 (defn set-font
-  [component name type size]
-  (println "Called clominal.editors.utils/set-font by " name "," type "," size)
-  (. component setFont (Font. name type size)))
+  [component parameters]
+  (let [name (parameters 0)
+        type (parameters 1)
+        size (parameters 2)]
+    (. component setFont (Font. name type size))))
 
 (defn printSize
   [component name]
