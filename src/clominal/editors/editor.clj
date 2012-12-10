@@ -5,16 +5,208 @@
            (java.beans PropertyChangeListener)
            (java.util HashMap)
            (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action
-                        JLabel JTextField JPanel JOptionPane SwingConstants JFileChooser SwingUtilities)
+                        JLabel JTextField JPanel JOptionPane SwingConstants JFileChooser
+                        SwingUtilities AbstractAction)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
            (javax.swing.event CaretListener DocumentListener)
            (javax.swing.text StyleConstants Utilities)
-           (java.io File FileInputStream FileWriter FileNotFoundException)
-           (clominal.editors AskMiniBufferAction))
+           (java.io File FileInputStream FileWriter FileNotFoundException))
   (:require [clominal.utils.guiutils :as guiutils]
             [clominal.utils.env :as env]
-            [clominal.editors.utils :as editorutils]))
+            [clominal.keys.keymap :as keymap]
+            ))
 
+;;------------------------------
+;;
+;; Maps (InputMaps & ActionMaps)
+;;
+;;------------------------------
+(def maps (doto (HashMap.)
+            (.put "default" (let [editor (JTextPane.)]
+                              [(. editor getInputMap JComponent/WHEN_FOCUSED)
+                               (. editor getActionMap)]))))
+
+;;------------------------------
+;;
+;; Editor actions
+;;
+;;------------------------------
+
+;;
+;; Editor action creator
+;;
+(defmacro defaction
+  [name bindings & body]
+  (cond (string? bindings)          (let [default-actionmap ((. maps get "default") 1)]
+                                      `(def ~name (. ~default-actionmap get ~bindings)))
+        (instance? Action bindings) `(def ~name ~bindings)
+        (vector? bindings)          (let [source (bindings 0)
+                                          evt    (gensym "evt")]
+                                      `(def ~name (proxy [AbstractAction] []
+                                                       (actionPerformed [~evt]
+                                                         ((fn [~source] ~@body)
+                                                          (. ~evt getSource))))))))
+
+;;
+;; Caret move action group.
+;;
+
+;; Charactor
+(defaction forward DefaultEditorKit/forwardAction)
+(defaction backward DefaultEditorKit/backwardAction)
+
+;; Word
+(defaction beginWord DefaultEditorKit/beginWordAction)
+(defaction endWord DefaultEditorKit/endWordAction)
+(defaction nextWord DefaultEditorKit/nextWordAction)
+(defaction previousWord DefaultEditorKit/previousWordAction)
+
+;; Line
+(defaction up DefaultEditorKit/upAction)
+(defaction down DefaultEditorKit/downAction)
+(defaction beginLine DefaultEditorKit/beginLineAction)
+(defaction endLine DefaultEditorKit/endLineAction)
+
+;; Paragraph
+(defaction beginParagraph DefaultEditorKit/beginParagraphAction)
+(defaction endParagraph DefaultEditorKit/endParagraphAction)
+
+;; Page
+(defaction pageDown DefaultEditorKit/pageDownAction)
+(defaction pageUp DefaultEditorKit/pageUpAction)
+
+;; Document
+(defaction begin DefaultEditorKit/beginAction)
+(defaction end DefaultEditorKit/endAction)
+
+
+;;
+;; Delete action group.
+;;
+
+;; Charactor
+(defaction deletePrevChar DefaultEditorKit/deletePrevCharAction)
+(defaction deleteNextChar DefaultEditorKit/deleteNextCharAction)
+
+;; Word
+(defaction deletePrevWord DefaultEditorKit/deletePrevWordAction)
+(defaction deletenextword DefaultEditorKit/deleteNextWordAction)
+
+
+;;
+;; Select group.
+;;
+
+(defaction selectWord DefaultEditorKit/selectWordAction)
+(defaction selectLine DefaultEditorKit/selectLineAction)
+(defaction selectParagraph DefaultEditorKit/selectParagraphAction)
+(defaction selectAll DefaultEditorKit/selectAllAction)
+
+
+;;
+;; Move selection group.
+;;
+
+;; Selection
+(defaction selectionBegin DefaultEditorKit/selectionBeginAction)
+(defaction selectionEnd DefaultEditorKit/selectionEndAction)
+
+
+;; Charactor
+(defaction selectionForward DefaultEditorKit/selectionForwardAction)
+(defaction selectionBackward DefaultEditorKit/selectionBackwardAction)
+
+;; Word
+(defaction selectionBeginWord DefaultEditorKit/selectionBeginWordAction)
+(defaction selectionEndWord DefaultEditorKit/selectionEndWordAction)
+(defaction selectionNextWord DefaultEditorKit/selectionNextWordAction)
+(defaction selectionPreviousWord DefaultEditorKit/selectionPreviousWordAction)
+
+;; Line
+(defaction selectionBeginLine DefaultEditorKit/selectionBeginLineAction)
+(defaction selectionEndLine DefaultEditorKit/selectionEndLineAction)
+(defaction selectionUp DefaultEditorKit/selectionUpAction)
+(defaction selectionDown DefaultEditorKit/selectionDownAction)
+
+;; Paragraph
+(defaction selectionBeginParagraph DefaultEditorKit/selectionBeginParagraphAction)
+(defaction selectionEndParagraph DefaultEditorKit/selectionEndParagraphAction)
+
+
+;;
+;; Edit operation group.
+;;
+
+(defaction copy DefaultEditorKit/copyAction)
+(defaction cut DefaultEditorKit/cutAction)
+(defaction paste DefaultEditorKit/pasteAction)
+
+
+;;
+;; Other group.
+;;
+
+(defaction defaultKeyTyped DefaultEditorKit/defaultKeyTypedAction)
+(defaction insertBreak DefaultEditorKit/insertBreakAction)
+(defaction insertTab DefaultEditorKit/insertTabAction)
+(defaction insertContent DefaultEditorKit/insertContentAction)
+(defaction beep DefaultEditorKit/beepAction)
+(defaction readOnly DefaultEditorKit/readOnlyAction)
+(defaction writable DefaultEditorKit/writableAction)
+
+
+;;
+;; File action group.
+;;
+
+(defaction openFile
+  [text-pane]
+  (let [chooser (JFileChooser. (str "~" env/os-file-separator))
+        result  (. chooser showOpenDialog nil)]
+    (if (= JFileChooser/APPROVE_OPTION result)
+        (. text-pane open (.. chooser getSelectedFile getAbsolutePath)))))
+
+(defaction saveFile
+  [text-pane]
+  (if (= nil (. text-pane getPath))
+      (. text-pane saveAs)
+      (. text-pane save)))
+
+(defaction changeBuffer
+  [text-pane]
+  (println "called 'changeBuffer'."))
+
+;;
+;; Font utilities
+;;
+(def new-title "Untitled")
+
+(defn get-font-names
+  []
+  (doseq [font (.. GraphicsEnvironment getLocalGraphicsEnvironment getAvailableFontFamilyNames)]
+    (println font)))
+
+(defn set-font
+  [component parameters]
+  (let [name (parameters 0)
+        type (parameters 1)
+        size (parameters 2)]
+    (. component setFont (Font. name type size))))
+
+(defn printSize
+  [component name]
+  (let [psize  (. component getPreferredSize)
+        pheight (. psize getHeight)
+        pwidth  (. psize getWidth)
+        size   (. component getSize)
+        height (. size getHeight)
+        width  (. size getWidth)]
+    (println name " preferred:[" pwidth "," pheight "], normal:[" width "," height "]")))
+
+
+;;
+;; Interfaces
+;;
 (definterface ITextLineNumber
   (setBorderGap [value])
   (setPreferredWidth [])
@@ -223,7 +415,10 @@
   (setPath [target])
   (save [])
   (saveAs [])
-  (open [target]))
+  (open [target])
+  (getStatusBar [])
+  (setKeyStroke [keystroke])
+  )
 
 (defn count-by-pattern
   [value pattern start end]
@@ -242,13 +437,9 @@
         ; Status Bar
         ;
         statusbar     (JPanel.)
-        char-code     (JLabel. "--")
-        separator     (JLabel. ":")
-        modified?     (JLabel. "**-")
-        file-name     (JLabel. "(New)")
-        cursor-format "[Line:%d, Column:%d]"
-        cursor        (JLabel. "")
+        keystrokes    (JLabel. "")
         filler        (JLabel. "")
+        char-code     (JLabel. "--")
 
         ;
         ; Text Editor
@@ -291,7 +482,7 @@
                                (with-open [stream (FileInputStream. @file-path)]
                                  (do
                                    (. this read stream doc)
-                                   (. file-name setText (. file getName))
+                                   ;(. file-name setText (. file getName))
                                    true))
                                (catch FileNotFoundException _ true)
                                (catch Exception e
@@ -302,7 +493,14 @@
                              (let [original-imr (proxy-super getInputMethodRequests)]
                                (reset! improved-imr (make-improved-imr original-imr))
                                @improved-imr)
-                             @improved-imr)))
+                             @improved-imr))
+                       (setKeyStroke [keystroke]
+                         (if (= nil keystroke)
+                             (. keystrokes setText "")
+                             (let [current (. keystrokes getText)]
+                               (. keystrokes setText (if (= current "")
+                                                         (keymap/str-keystroke keystroke)
+                                                         (str current ", " (keymap/str-keystroke keystroke))))))))
         scroll       (JScrollPane. text-pane
                                    JScrollPane/VERTICAL_SCROLLBAR_ALWAYS
                                    JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)
@@ -320,7 +518,7 @@
         ;
         ; Others
         ;
-        map-vec           (@editorutils/ref-maps "default")
+        map-vec           (. maps get "default")
         default-inputmap  (map-vec 0)
         default-actionmap (map-vec 1)
         default-fonts     {:linux   ["Takaoゴシック" Font/PLAIN 14]
@@ -360,19 +558,15 @@
       (guiutils/grid-bag-layout
         :gridx 0, :gridy 0
         :anchor :WEST
-        char-code
+        keystrokes
         :gridx 1, :gridy 0
-        separator
-        :gridx 2, :gridy 0
-        modified?
-        :gridx 3, :gridy 0
-        file-name
-        :gridx 4, :gridy 0
-        cursor
-        :gridx 5, :gridy 0
         :fill :HORIZONTAL
         :weightx 1.0
-        filler))
+        filler
+        :gridx 2, :gridy 0
+        :weightx 0.0
+        char-code
+        ))
 
     ;
     ; Root Panel
@@ -392,8 +586,9 @@
         :weighty 0.0
         :gridy 1
         statusbar))
-    (doseq [component [text-pane char-code separator modified? file-name cursor]]
-      (editorutils/set-font component (default-fonts (env/get-os-keyword))))
+    (doseq [component [text-pane keystrokes char-code]]
+      (set-font component (default-fonts (env/get-os-keyword))))
 
     root-panel
     ))
+

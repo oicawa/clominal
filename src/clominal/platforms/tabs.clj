@@ -1,13 +1,10 @@
 (ns clominal.platforms.tabs
   (:use [clojure.contrib.def])
   (:require [clominal.action :as action]
-            [clominal.editors.utils :as utils]
             [clominal.editors.editor :as editor]
             )
   (:import (javax.swing JComponent JTabbedPane JPanel JEditorPane KeyStroke AbstractAction)
-           (java.awt.event InputEvent KeyEvent)
-           (clominal.editors EditorPanel)
-           ))
+           (java.awt.event InputEvent KeyEvent)))
 
 ;; ------------------------------
 ;; TabbedPane
@@ -25,10 +22,8 @@
 ;; ------------------------------
 ;; Actions
 (defvar ^:dynamic *add-tab* (action/create (fn [evt tabs]
-                                             (let [;editor (EditorPanel.)
-                                                   editor (editor/make-editor)
-                                                   ]
-                                               (. tabs addTab utils/new-title editor)
+                                             (let [editor (editor/make-editor)]
+                                               (. tabs addTab editor/new-title editor)
                                                (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
                                                (. editor requestFocusInWindow)
                                                ))))

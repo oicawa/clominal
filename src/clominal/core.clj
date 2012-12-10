@@ -1,19 +1,9 @@
-(compile 'clominal.editors.MiniBufferAction)
-(compile 'clominal.editors.AskMiniBufferAction)
-(compile 'clominal.editors.MiniBuffer)
-(compile 'clominal.editors.ModeLine)
-(compile 'clominal.editors.TextEditor)
-(compile 'clominal.editors.MiddleKeyAction)
-(compile 'clominal.editors.LastKeyAction)
-(compile 'clominal.editors.EditorPanel)
-
 (System/setProperty "awt.useSystemAAFontSettings" "on")
 (javax.swing.UIManager/setLookAndFeel "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
 
 (ns clominal.core
-  (:require [clominal.action :as action]
-            [clominal.keys.keymap :as keymap]
-            [clominal.platforms.frame :as frame])
+  (:require [clominal.platforms.frame :as frame]
+            [clominal])
   (:import (javax.swing SwingUtilities)))
 
 (defn main [& args]

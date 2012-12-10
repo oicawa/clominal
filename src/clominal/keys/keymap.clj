@@ -1,80 +1,25 @@
 (ns clominal.keys.keymap
   (:use [clojure.contrib.def])
-  (:require [clominal.action :as action]
-            [clominal.utils.env :as env])
-  (:import (javax.swing InputMap ActionMap JComponent KeyStroke SwingUtilities)
+  (:require [clominal.utils.env :as env])
+  (:import (javax.swing AbstractAction InputMap ActionMap JComponent KeyStroke SwingUtilities)
            (java.awt Toolkit)
            (java.awt.event InputEvent KeyEvent)))
 
-(defn get-maps
-  "
-  This function returns a vector constructed InputMap and ActionMap object from ref-map.
-  If not found from the specified maps vector, it creates a new InputMap/ActionMap object, and add to ref-maps.
-
-  ref-maps : A 'ref' map object (key:key bind name, value:InputMap and ActionMap vector) of the target component.
-  name     : The key bind name.
-  return   : [inputmap actionmap]
-  "
-  [ref-maps name]
-  (let [map-vec (@ref-maps name)]
-    (if (= nil map-vec)
-        (let [map-vec [(InputMap.) (ActionMap.)]]
-          (dosync (alter ref-maps assoc name map-vec))
-          map-vec)
-        map-vec)))
-
-
-(defn- print-maps
-  "
-  This function is for debugging.
-  "
-  [stroke-name inputmap actionmap]
-  (println "  stroke name = " stroke-name)
-  (println "  inputmap    = " inputmap)
-  (println "    keys:")
-  (doseq [key (. inputmap keys)]
-    (println "      " (str key)))
-  (println "  actionmap   = " actionmap)
-  (println "    keys:")
-  (doseq [key (. actionmap keys)]
-    (println "      " (str key))))
-
-
-(def windows-composition-enabled? (ref nil))
-
-; (defmacro enable-inputmethod
-;   [component flag]
-;   (if (env/windows?)
-;   	  (let [icontext (gensym "icontext")
-;             current  (gensym "current")
-;             enabled? (gensym "enabled?")]
-;         `(let [~icontext (. ~component getInputContext)
-;                ~current  (. ~icontext isCompositionEnabled)]
-;           (if ~flag
-;             (. ~icontext (setCompositionEnabled @windows-composition-enabled?))
-;             (do
-;               (dosync (ref-set windows-composition-enabled? ~current))
-;               (. ~icontext (setCompositionEnabled false))))))
-;       `(. ~component enableInputMethods ~flag)))
-(defn enable-inputmethod
-  [component flag]
-  ;(println (format "enableInputMethods(%s)" flag))
-  (. component enableInputMethods flag))
-
-        
-
-
-(defn create-operation
-  "
-  This function create clojure map object as operation.
-
-  ref-maps : A 'ref' map object (key:key bind name, value:InputMap/ActionMap vector) of the target component.
-  action   : A Action object.
-  return   : A operation object. (clojure map)
-  "
-  [ref-maps action]
-  {:ref-maps ref-maps
-   :action   action})
+(defn make-key-action
+  [act inputmap actionmap]
+  (let [is-last? (not (instance? KeyStroke act))]
+    (proxy [AbstractAction] []
+      (actionPerformed [evt]
+        (let [component (. evt getSource)]
+          (doto component
+            (.setEditable is-last?)
+            (.setInputMap JComponent/WHEN_FOCUSED inputmap)
+            (.setActionMap actionmap))
+          (if is-last?
+              (do
+                (. component setKeyStroke nil)
+                (. act actionPerformed evt))
+              (. component setKeyStroke act)))))))
 
 (def mask-keys
   {'Ctrl  InputEvent/CTRL_DOWN_MASK
@@ -144,21 +89,43 @@
         (list? (first key-binds)) (map get-key-stroke key-binds)
         true (get-key-stroke key-binds)))
 
+
 (defn str-keystroke
   [keystroke]
   (let [mod (KeyEvent/getKeyModifiersText (. keystroke getModifiers))
         key (KeyEvent/getKeyText (. keystroke getKeyCode))]
     (str mod "+" key)))
 
-(defn print-keystroke
-  [keystroke]
-  (let [mod (. keystroke getModifiers)
-        key (. keystroke getKeyCode)]
-    (println "----------")
-    (println "Ctrl =" InputEvent/CTRL_DOWN_MASK)
-    (println "Alt  =" InputEvent/ALT_DOWN_MASK)
-    (println "Modifiers Value =" mod)
-    (println "Modifiers Text  =" (KeyEvent/getKeyModifiersText mod))
-    (println "KeyCode         =" key)
-    (println "KeyText         =" (KeyEvent/getKeyText key))))
 
+(defn define-keybind
+  "Define key bind for specified operation for one stroke or more."
+  [maps key-bind operation]
+  (let [default-maps      (. maps get "default")
+        default-inputmap  (default-maps 0)
+        default-actionmap (default-maps 1)
+        all-strokes       (get-key-strokes key-bind)]
+    (if (seq? all-strokes)
+        (loop [inputmap    default-inputmap
+               actionmap   default-actionmap
+               stroke      (first all-strokes)
+               strokes     (rest all-strokes)]
+          (let [stroke-name (str stroke)]
+            (if (= nil (first strokes))
+                (do
+                  (. inputmap  put stroke stroke-name)
+                  (. actionmap put stroke-name (make-key-action operation default-inputmap default-actionmap)))
+                (let [map-vec        (let [m (. maps get stroke-name)]
+                                       (if (= nil m)
+                                           (do
+                                             (. maps put stroke-name [(InputMap.) (ActionMap.)])
+                                             (. maps get stroke-name))
+                                           m))
+                      next-inputmap  (map-vec 0)
+                      next-actionmap (map-vec 1)
+                      middle-action  (make-key-action stroke next-inputmap next-actionmap)]
+                  (. inputmap  put stroke stroke-name)
+                  (. actionmap put stroke-name middle-action)
+                  (recur next-inputmap next-actionmap (first strokes) (rest strokes))))))
+        (do
+          (. default-inputmap  put all-strokes (str all-strokes))
+          (. default-actionmap put (str all-strokes) (make-key-action operation default-inputmap default-actionmap))))))

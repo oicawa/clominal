@@ -7,6 +7,7 @@ CLS_PATH=${BASE_PATH}/classes
 
 java \
 -cp \
+.:\
 ${SRC_PATH}:\
 ${CLS_PATH}:\
 ${LIB_PATH}/clojure-1.4.0.jar:\

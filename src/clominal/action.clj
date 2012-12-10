@@ -1,6 +1,5 @@
 (ns clominal.action
-  (:import (javax.swing AbstractAction))
-  (:gen-class))
+  (:import (javax.swing AbstractAction KeyStroke)))
 
 (defn create
   "Create new action that calls proc function."
