@@ -22,7 +22,7 @@
 ;; ------------------------------
 ;; Actions
 (defvar ^:dynamic *add-tab* (action/create (fn [evt tabs]
-                                             (let [editor (editor/make-editor)]
+                                             (let [editor (editor/make-editor tabs)]
                                                (. tabs addTab editor/new-title editor)
                                                (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
                                                (. editor requestFocusInWindow)

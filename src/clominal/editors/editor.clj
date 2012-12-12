@@ -164,8 +164,8 @@
 
 (defaction openFile
   [text-pane]
-  (let [chooser (JFileChooser. (str "~" env/os-file-separator))
-        result  (. chooser showOpenDialog nil)]
+  (let [chooser   (JFileChooser. (str "~" env/os-file-separator))
+        result    (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)
         (. text-pane open (.. chooser getSelectedFile getAbsolutePath)))))
 
@@ -416,6 +416,7 @@
 (definterface ITextPane
   (getPath [])
   (setPath [target])
+  (modified [modified?])
   (save [])
   (saveAs [])
   (open [target])
@@ -435,7 +436,7 @@
               (recur (+ new-idx 1) (+ cnt 1)))))))
 
 (defn make-editor
-  []
+  [tabs]
   (let [;
         ; Status Bar
         ;
@@ -455,38 +456,57 @@
                        (setPath [path]
                          (let [full-path (env/get-absolute-path path)]
                            (dosync (reset! file-path full-path))))
+                       (modified [modified?]
+                         (let [title (if (= nil @file-path)
+                                         ""
+                                         (. (File. @file-path) getName))
+                               root  (.. this getParent getParent getParent)
+                               index (. tabs indexOfComponent root)]
+                           (println "Modified!!")
+                           (. tabs setTitleAt index (str title (if modified? " *" "")))))
                        (save
                          []
                          (try
-                           (with-open [stream (FileWriter. @file-path)]
-                             (do
-                               (. this write stream)
-                               true))
+                           (with-open [stream (FileWriter. (. this getPath))]
+                             (doto this
+                               (.write stream)
+                               (.modified false)))
                            (catch Exception e
                              (. e printStackTrace)
-                             (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION))
-                             false)))
+                             (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION)))))
                        (saveAs
                          []
                          (let [chooser (JFileChooser. (str "~" env/os-file-separator))
                                result  (. chooser showSaveDialog nil)]
                            (if (= JFileChooser/APPROVE_OPTION result)
-                               (do
-                                 (. this setPath (.. chooser getSelectedFile getAbsolutePath))
-                                 (. this save)))))
+                               (doto this
+                                 (.setPath (.. chooser getSelectedFile getAbsolutePath))
+                                 (.save)
+                                 (.modified false)))))
                        (open
                          [target]
-                         (let [doc  (. this getDocument)
-                               kit  (. this getEditorKit)
-                               file (File. target)]
+                         (let [doc       (. this getDocument)
+                               kit       (. this getEditorKit)
+                               file      (File. target)
+                               text-pane this]
                            (do
-                             (reset! file-path target)
+                             (. this setPath target)
                              (try
                                (with-open [stream (FileInputStream. @file-path)]
-                                 (do
-                                   (. this read stream doc)
-                                   ;(. file-name setText (. file getName))
-                                   true))
+                                 (doto this
+                                   (.read stream doc)
+                                   (.modified false))
+                                 (doto (. this getDocument)
+                                   (.addDocumentListener (proxy [DocumentListener] []
+                                                           (changedUpdate [evt]
+                                                             (println "changeUpdate called.")
+                                                             (. text-pane modified true))
+                                                           (insertUpdate [evt]
+                                                             (println "insertUpdate called.")
+                                                             (. text-pane modified true))
+                                                           (removeUpdate [evt]
+                                                             (println "removeUpdate called.")
+                                                             (. text-pane modified true))))))
                                (catch FileNotFoundException _ true)
                                (catch Exception e
                                  (. e printStackTrace)
@@ -508,16 +528,16 @@
                                    JScrollPane/VERTICAL_SCROLLBAR_ALWAYS
                                    JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)
         ;
-        ; Line Numbers
-        ;
-        text-line-number (make-text-line-number text-pane 3)
-        
-        ;
         ; Root Panel
         ;
         root-panel   (proxy [JPanel] []
                        (requestFocusInWindow []
                          (. text-pane requestFocusInWindow)))
+                ;
+        ; Line Numbers
+        ;
+        text-line-number (make-text-line-number text-pane 3)
+        
         ;
         ; Others
         ;
@@ -545,6 +565,18 @@
       ;                              clm (- dot (. val lastIndexOf "\n" dot))]
       ;                          (. cursor setText (format cursor-format row clm))))))
                                )
+    (doto (. text-pane getDocument)
+      (.addDocumentListener (proxy [DocumentListener] []
+                              (changedUpdate [evt]
+                                (println "changeUpdate called.")
+                                (. text-pane modified true))
+                              (insertUpdate [evt]
+                                (println "insertUpdate called.")
+                                (. text-pane modified true))
+                              (removeUpdate [evt]
+                                (println "removeUpdate called.")
+                                (. text-pane modified true)))))
+
 
     ;
     ; Scroll Pane
