@@ -9,7 +9,7 @@
                         SwingUtilities AbstractAction)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
            (javax.swing.event CaretListener DocumentListener)
-           (javax.swing.text StyleConstants Utilities)
+           (javax.swing.text StyleConstants Utilities DefaultEditorKit)
            (java.io File FileInputStream FileWriter FileNotFoundException))
   (:require [clominal.utils.guiutils :as guiutils]
             [clominal.utils.env :as env]
@@ -37,15 +37,18 @@
 ;;
 (defmacro defaction
   [name bindings & body]
-  (cond (string? bindings)          (let [default-actionmap ((. maps get "default") 1)]
-                                      `(def ~name (. ~default-actionmap get ~bindings)))
-        (instance? Action bindings) `(def ~name ~bindings)
-        (vector? bindings)          (let [source (bindings 0)
-                                          evt    (gensym "evt")]
-                                      `(def ~name (proxy [AbstractAction] []
-                                                       (actionPerformed [~evt]
-                                                         ((fn [~source] ~@body)
-                                                          (. ~evt getSource))))))))
+  (if (vector? bindings)
+      (let [source (bindings 0)
+            evt    (gensym "evt")]
+        `(def ~name (proxy [AbstractAction] []
+                      (actionPerformed [~evt]
+                        ((fn [~source] ~@body)
+                         (. ~evt getSource))))))
+      (let [value (eval bindings)]
+        (cond (string? value)          (let [default-actionmap ((. maps get "default") 1)]
+                                         `(def ~name (. ~default-actionmap get ~bindings)))
+              (instance? Action value) `(def ~name ~bindings)))))
+
 
 ;;
 ;; Caret move action group.
