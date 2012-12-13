@@ -1,9 +1,15 @@
-(ns clominal.keys.keymap
-  (:use [clojure.contrib.def])
-  (:require [clominal.utils.env :as env])
+(ns clominal.keys
+  (:use [clojure.contrib.def]
+        [clominal.utils])
   (:import (javax.swing AbstractAction InputMap ActionMap JComponent KeyStroke SwingUtilities)
            (java.awt Toolkit)
            (java.awt.event InputEvent KeyEvent)))
+
+(definterface IKeybindComponent
+  (setEditEnable [value])
+  (setInputMap [inputmap])
+  (setActionMap [actionmap])
+  (setKeyStroke [keystroke]))
 
 (defn make-key-action
   [act inputmap actionmap]
@@ -12,8 +18,8 @@
       (actionPerformed [evt]
         (let [component (. evt getSource)]
           (doto component
-            (.setEditable is-last?)
-            (.setInputMap JComponent/WHEN_FOCUSED inputmap)
+            (.setEditEnable is-last?)
+            (.setInputMap inputmap)
             (.setActionMap actionmap))
           (if is-last?
               (do

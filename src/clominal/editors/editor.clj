@@ -11,76 +11,59 @@
            (javax.swing.event CaretListener DocumentListener)
            (javax.swing.text StyleConstants Utilities DefaultEditorKit)
            (java.io File FileInputStream FileWriter FileNotFoundException))
-  (:require [clominal.utils.guiutils :as guiutils]
-            [clominal.utils.env :as env]
-            [clominal.keys.keymap :as keymap]
-            ))
+  (:require [clominal.keys :as keys])
+  (:use [clominal.utils]))
 
 ;;------------------------------
 ;;
 ;; Maps (InputMaps & ActionMaps)
 ;;
 ;;------------------------------
-(def maps (doto (HashMap.)
-            (.put "default" (let [editor (JTextPane.)]
-                              [(. editor getInputMap JComponent/WHEN_FOCUSED)
-                               (. editor getActionMap)]))))
+(def maps (make-maps (JTextPane.) JComponent/WHEN_FOCUSED))
+
 
 ;;------------------------------
 ;;
 ;; Editor actions
 ;;
 ;;------------------------------
-
-;;
-;; Editor action creator
-;;
-(defmacro defaction
-  [name bindings & body]
-  (if (vector? bindings)
-      (let [source (bindings 0)
-            evt    (gensym "evt")]
-        `(def ~name (proxy [AbstractAction] []
-                      (actionPerformed [~evt]
-                        ((fn [~source] ~@body)
-                         (. ~evt getSource))))))
-      (let [value (eval bindings)]
-        (cond (string? value)          (let [default-actionmap ((. maps get "default") 1)]
-                                         `(def ~name (. ~default-actionmap get ~bindings)))
-              (instance? Action value) `(def ~name ~bindings)))))
-
+(defn make-editor-action
+  [action-string]
+  (assert (string? action-string))
+  (let [default-actionmap ((. maps get "default") 1)]
+    (. default-actionmap get action-string)))
 
 ;;
 ;; Caret move action group.
 ;;
 
 ;; Charactor
-(defaction forward DefaultEditorKit/forwardAction)
-(defaction backward DefaultEditorKit/backwardAction)
+(def forward (make-editor-action DefaultEditorKit/forwardAction))
+(def backward (make-editor-action DefaultEditorKit/backwardAction))
 
 ;; Word
-(defaction beginWord DefaultEditorKit/beginWordAction)
-(defaction endWord DefaultEditorKit/endWordAction)
-(defaction nextWord DefaultEditorKit/nextWordAction)
-(defaction previousWord DefaultEditorKit/previousWordAction)
+(def beginWord (make-editor-action DefaultEditorKit/beginWordAction))
+(def endWord (make-editor-action DefaultEditorKit/endWordAction))
+(def nextWord (make-editor-action DefaultEditorKit/nextWordAction))
+(def previousWord (make-editor-action DefaultEditorKit/previousWordAction))
 
 ;; Line
-(defaction up DefaultEditorKit/upAction)
-(defaction down DefaultEditorKit/downAction)
-(defaction beginLine DefaultEditorKit/beginLineAction)
-(defaction endLine DefaultEditorKit/endLineAction)
+(def up (make-editor-action DefaultEditorKit/upAction))
+(def down (make-editor-action DefaultEditorKit/downAction))
+(def beginLine (make-editor-action DefaultEditorKit/beginLineAction))
+(def endLine (make-editor-action DefaultEditorKit/endLineAction))
 
 ;; Paragraph
-(defaction beginParagraph DefaultEditorKit/beginParagraphAction)
-(defaction endParagraph DefaultEditorKit/endParagraphAction)
+(def beginParagraph (make-editor-action DefaultEditorKit/beginParagraphAction))
+(def endParagraph (make-editor-action DefaultEditorKit/endParagraphAction))
 
 ;; Page
-(defaction pageDown DefaultEditorKit/pageDownAction)
-(defaction pageUp DefaultEditorKit/pageUpAction)
+(def pageDown (make-editor-action DefaultEditorKit/pageDownAction))
+(def pageUp (make-editor-action DefaultEditorKit/pageUpAction))
 
 ;; Document
-(defaction begin DefaultEditorKit/beginAction)
-(defaction end DefaultEditorKit/endAction)
+(def begin (make-editor-action DefaultEditorKit/beginAction))
+(def end (make-editor-action DefaultEditorKit/endAction))
 
 
 ;;
@@ -88,22 +71,22 @@
 ;;
 
 ;; Charactor
-(defaction deletePrevChar DefaultEditorKit/deletePrevCharAction)
-(defaction deleteNextChar DefaultEditorKit/deleteNextCharAction)
+(def deletePrevChar (make-editor-action DefaultEditorKit/deletePrevCharAction))
+(def deleteNextChar (make-editor-action DefaultEditorKit/deleteNextCharAction))
 
 ;; Word
-(defaction deletePrevWord DefaultEditorKit/deletePrevWordAction)
-(defaction deletenextword DefaultEditorKit/deleteNextWordAction)
+(def deletePrevWord (make-editor-action DefaultEditorKit/deletePrevWordAction))
+(def deletenextword (make-editor-action DefaultEditorKit/deleteNextWordAction))
 
 
 ;;
 ;; Select group.
 ;;
 
-(defaction selectWord DefaultEditorKit/selectWordAction)
-(defaction selectLine DefaultEditorKit/selectLineAction)
-(defaction selectParagraph DefaultEditorKit/selectParagraphAction)
-(defaction selectAll DefaultEditorKit/selectAllAction)
+(def selectWord (make-editor-action DefaultEditorKit/selectWordAction))
+(def selectLine (make-editor-action DefaultEditorKit/selectLineAction))
+(def selectParagraph (make-editor-action DefaultEditorKit/selectParagraphAction))
+(def selectAll (make-editor-action DefaultEditorKit/selectAllAction))
 
 
 ;;
@@ -111,51 +94,51 @@
 ;;
 
 ;; Selection
-(defaction selectionBegin DefaultEditorKit/selectionBeginAction)
-(defaction selectionEnd DefaultEditorKit/selectionEndAction)
+(def selectionBegin (make-editor-action DefaultEditorKit/selectionBeginAction))
+(def selectionEnd (make-editor-action DefaultEditorKit/selectionEndAction))
 
 
 ;; Charactor
-(defaction selectionForward DefaultEditorKit/selectionForwardAction)
-(defaction selectionBackward DefaultEditorKit/selectionBackwardAction)
+(def selectionForward (make-editor-action DefaultEditorKit/selectionForwardAction))
+(def selectionBackward (make-editor-action DefaultEditorKit/selectionBackwardAction))
 
 ;; Word
-(defaction selectionBeginWord DefaultEditorKit/selectionBeginWordAction)
-(defaction selectionEndWord DefaultEditorKit/selectionEndWordAction)
-(defaction selectionNextWord DefaultEditorKit/selectionNextWordAction)
-(defaction selectionPreviousWord DefaultEditorKit/selectionPreviousWordAction)
+(def selectionBeginWord (make-editor-action DefaultEditorKit/selectionBeginWordAction))
+(def selectionEndWord (make-editor-action DefaultEditorKit/selectionEndWordAction))
+(def selectionNextWord (make-editor-action DefaultEditorKit/selectionNextWordAction))
+(def selectionPreviousWord (make-editor-action DefaultEditorKit/selectionPreviousWordAction))
 
 ;; Line
-(defaction selectionBeginLine DefaultEditorKit/selectionBeginLineAction)
-(defaction selectionEndLine DefaultEditorKit/selectionEndLineAction)
-(defaction selectionUp DefaultEditorKit/selectionUpAction)
-(defaction selectionDown DefaultEditorKit/selectionDownAction)
+(def selectionBeginLine (make-editor-action DefaultEditorKit/selectionBeginLineAction))
+(def selectionEndLine (make-editor-action DefaultEditorKit/selectionEndLineAction))
+(def selectionUp (make-editor-action DefaultEditorKit/selectionUpAction))
+(def selectionDown (make-editor-action DefaultEditorKit/selectionDownAction))
 
 ;; Paragraph
-(defaction selectionBeginParagraph DefaultEditorKit/selectionBeginParagraphAction)
-(defaction selectionEndParagraph DefaultEditorKit/selectionEndParagraphAction)
+(def selectionBeginParagraph (make-editor-action DefaultEditorKit/selectionBeginParagraphAction))
+(def selectionEndParagraph (make-editor-action DefaultEditorKit/selectionEndParagraphAction))
 
 
 ;;
 ;; Edit operation group.
 ;;
 
-(defaction copy DefaultEditorKit/copyAction)
-(defaction cut DefaultEditorKit/cutAction)
-(defaction paste DefaultEditorKit/pasteAction)
+(def copy (make-editor-action DefaultEditorKit/copyAction))
+(def cut (make-editor-action DefaultEditorKit/cutAction))
+(def paste (make-editor-action DefaultEditorKit/pasteAction))
 
 
 ;;
 ;; Other group.
 ;;
 
-(defaction defaultKeyTyped DefaultEditorKit/defaultKeyTypedAction)
-(defaction insertBreak DefaultEditorKit/insertBreakAction)
-(defaction insertTab DefaultEditorKit/insertTabAction)
-(defaction insertContent DefaultEditorKit/insertContentAction)
-(defaction beep DefaultEditorKit/beepAction)
-(defaction readOnly DefaultEditorKit/readOnlyAction)
-(defaction writable DefaultEditorKit/writableAction)
+(def defaultKeyTyped (make-editor-action DefaultEditorKit/defaultKeyTypedAction))
+(def insertBreak (make-editor-action DefaultEditorKit/insertBreakAction))
+(def insertTab (make-editor-action DefaultEditorKit/insertTabAction))
+(def insertContent (make-editor-action DefaultEditorKit/insertContentAction))
+(def beep (make-editor-action DefaultEditorKit/beepAction))
+(def readOnly (make-editor-action DefaultEditorKit/readOnlyAction))
+(def writable (make-editor-action DefaultEditorKit/writableAction))
 
 
 ;;
@@ -164,7 +147,7 @@
 
 (defaction openFile
   [text-pane]
-  (let [chooser   (JFileChooser. (str "~" env/os-file-separator))
+  (let [chooser   (JFileChooser. (str "~" os-file-separator))
         result    (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)
         (. text-pane open (.. chooser getSelectedFile getAbsolutePath)))))
@@ -420,9 +403,7 @@
   (save [])
   (saveAs [])
   (open [target])
-  (getStatusBar [])
-  (setKeyStroke [keystroke])
-  )
+  (getStatusBar []))
 
 (defn count-by-pattern
   [value pattern start end]
@@ -450,11 +431,11 @@
         ;
         file-path    (atom nil)
         improved-imr (atom nil)
-        text-pane    (proxy [JTextPane ITextPane] []
+        text-pane    (proxy [JTextPane ITextPane clominal.keys.IKeybindComponent] []
                        (getPath []
                          @file-path)
                        (setPath [path]
-                         (let [full-path (env/get-absolute-path path)]
+                         (let [full-path (get-absolute-path path)]
                            (dosync (reset! file-path full-path))))
                        (modified [modified?]
                          (if (= nil @file-path)
@@ -475,7 +456,7 @@
                              (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION)))))
                        (saveAs
                          []
-                         (let [chooser (JFileChooser. (str "~" env/os-file-separator))
+                         (let [chooser (JFileChooser. (str "~" os-file-separator))
                                result  (. chooser showSaveDialog nil)]
                            (if (= JFileChooser/APPROVE_OPTION result)
                                (doto this
@@ -510,13 +491,17 @@
                                (reset! improved-imr (make-improved-imr original-imr))
                                @improved-imr)
                              @improved-imr))
+                       (setEditEnable [value]
+                         (. this setEditable value))
+                       (setInputMap [inputmap] (. this setInputMap JComponent/WHEN_FOCUSED inputmap))
+                       (setActionMap [actionmap] (proxy-super setActionMap actionmap))
                        (setKeyStroke [keystroke]
                          (if (= nil keystroke)
                              (. keystrokes setText "")
                              (let [current (. keystrokes getText)]
                                (. keystrokes setText (if (= current "")
-                                                         (keymap/str-keystroke keystroke)
-                                                         (str current ", " (keymap/str-keystroke keystroke))))))))
+                                                         (keys/str-keystroke keystroke)
+                                                         (str current ", " (keys/str-keystroke keystroke))))))))
         scroll       (JScrollPane. text-pane
                                    JScrollPane/VERTICAL_SCROLLBAR_ALWAYS
                                    JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)
@@ -577,7 +562,7 @@
       (.setName "statusbar")
       (.setPreferredSize nil)
       (.setLayout (GridBagLayout.))
-      (guiutils/grid-bag-layout
+      (grid-bag-layout
         :gridx 0, :gridy 0
         :anchor :WEST
         keystrokes
@@ -596,7 +581,7 @@
     (doto root-panel
       (.setLayout (GridBagLayout.))
       (.setName "root-panel")
-      (guiutils/grid-bag-layout
+      (grid-bag-layout
         :fill :BOTH
         :gridx 0
         :gridy 0
@@ -609,7 +594,7 @@
         :gridy 1
         statusbar))
     (doseq [component [text-pane keystrokes char-code]]
-      (set-font component (default-fonts (env/get-os-keyword))))
+      (set-font component (default-fonts (get-os-keyword))))
 
     root-panel
     ))

@@ -1,4 +1,9 @@
-(ns clominal.utils.guiutils)
+(ns clominal.utils
+  (:require [clojure.contrib.string :as string])
+  (:import (java.io File)
+           (java.util HashMap)
+           (java.util.regex Pattern)
+           (javax.swing AbstractAction)))
 
 ;;------------------------------
 ;; The macro for using GridBagLayout/GridBagConstraint easy.
@@ -67,3 +72,46 @@
               nil)))))
               
                     
+(defn windows?
+  []
+  (let [os-name (.. (System/getProperty "os.name") toLowerCase)]
+    (= 0 (. os-name indexOf "windows"))))
+
+(defn get-os-keyword
+  []
+  (let [os-raw-name (.. (System/getProperty "os.name") toLowerCase)
+        os-name     (if (= 0 (. os-raw-name indexOf "windows"))
+                        "windows"
+                        os-raw-name)]
+    (keyword os-name)))
+
+(def os-file-separator (System/getProperty "file.separator"))
+
+(defn get-absolute-path
+  [path]
+  (let [fields (seq (. path split (Pattern/quote os-file-separator)))
+        head   (first fields)
+        body   (rest fields)]
+    (if (= head "~")
+        (string/join os-file-separator (cons (System/getProperty "user.home") body))
+        (. (File. path) getAbsolutePath))))
+
+(defn make-maps 
+  [component mode]
+  (doto (HashMap.)
+    (.put "default" [(. component getInputMap mode)
+                     (. component getActionMap)])))
+
+;;
+;; Action macro
+;;
+(defmacro defaction
+  [name bindings & body]
+  (assert (vector? bindings))
+  (assert (= 1 (count bindings)))
+  (let [source (bindings 0)
+        evt    (gensym "evt")]
+    `(def ~name (proxy [AbstractAction] []
+                  (actionPerformed [~evt]
+                    ((fn [~source] ~@body)
+                     (. ~evt getSource)))))))
