@@ -457,13 +457,12 @@
                          (let [full-path (env/get-absolute-path path)]
                            (dosync (reset! file-path full-path))))
                        (modified [modified?]
-                         (let [title (if (= nil @file-path)
-                                         ""
-                                         (. (File. @file-path) getName))
-                               root  (.. this getParent getParent getParent)
-                               index (. tabs indexOfComponent root)]
-                           (println "Modified!!")
-                           (. tabs setTitleAt index (str title (if modified? " *" "")))))
+                         (if (= nil @file-path)
+                             new-title
+                             (let [title (. (File. @file-path) getName)
+                                   root  (.. this getParent getParent getParent)
+                                   index (. tabs indexOfComponent root)]
+                               (. tabs setTitleAt index (str title (if modified? " *" ""))))))
                        (save
                          []
                          (try
@@ -498,15 +497,9 @@
                                    (.modified false))
                                  (doto (. this getDocument)
                                    (.addDocumentListener (proxy [DocumentListener] []
-                                                           (changedUpdate [evt]
-                                                             (println "changeUpdate called.")
-                                                             (. text-pane modified true))
-                                                           (insertUpdate [evt]
-                                                             (println "insertUpdate called.")
-                                                             (. text-pane modified true))
-                                                           (removeUpdate [evt]
-                                                             (println "removeUpdate called.")
-                                                             (. text-pane modified true))))))
+                                                           (changedUpdate [evt] )
+                                                           (insertUpdate [evt] (. text-pane modified true))
+                                                           (removeUpdate [evt] (. text-pane modified true))))))
                                (catch FileNotFoundException _ true)
                                (catch Exception e
                                  (. e printStackTrace)
@@ -567,15 +560,9 @@
                                )
     (doto (. text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
-                              (changedUpdate [evt]
-                                (println "changeUpdate called.")
-                                (. text-pane modified true))
-                              (insertUpdate [evt]
-                                (println "insertUpdate called.")
-                                (. text-pane modified true))
-                              (removeUpdate [evt]
-                                (println "removeUpdate called.")
-                                (. text-pane modified true)))))
+                              (changedUpdate [evt] )
+                              (insertUpdate [evt] (. text-pane modified true))
+                              (removeUpdate [evt] (. text-pane modified true)))))
 
 
     ;
