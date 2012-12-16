@@ -16,157 +16,23 @@
 
 ;;------------------------------
 ;;
-;; Maps (InputMaps & ActionMaps)
+;; Global values
 ;;
 ;;------------------------------
-(def maps (make-maps (JTextPane.) JComponent/WHEN_FOCUSED))
 
-
-;;------------------------------
-;;
-;; Editor actions
-;;
-;;------------------------------
-(defn make-editor-action
-  [action-string]
-  (assert (string? action-string))
-  (let [default-actionmap ((. maps get "default") 1)]
-    (. default-actionmap get action-string)))
-
-;;
-;; Caret move action group.
-;;
-
-;; Charactor
-(def forward (make-editor-action DefaultEditorKit/forwardAction))
-(def backward (make-editor-action DefaultEditorKit/backwardAction))
-
-;; Word
-(def beginWord (make-editor-action DefaultEditorKit/beginWordAction))
-(def endWord (make-editor-action DefaultEditorKit/endWordAction))
-(def nextWord (make-editor-action DefaultEditorKit/nextWordAction))
-(def previousWord (make-editor-action DefaultEditorKit/previousWordAction))
-
-;; Line
-(def up (make-editor-action DefaultEditorKit/upAction))
-(def down (make-editor-action DefaultEditorKit/downAction))
-(def beginLine (make-editor-action DefaultEditorKit/beginLineAction))
-(def endLine (make-editor-action DefaultEditorKit/endLineAction))
-
-;; Paragraph
-(def beginParagraph (make-editor-action DefaultEditorKit/beginParagraphAction))
-(def endParagraph (make-editor-action DefaultEditorKit/endParagraphAction))
-
-;; Page
-(def pageDown (make-editor-action DefaultEditorKit/pageDownAction))
-(def pageUp (make-editor-action DefaultEditorKit/pageUpAction))
-
-;; Document
-(def begin (make-editor-action DefaultEditorKit/beginAction))
-(def end (make-editor-action DefaultEditorKit/endAction))
-
-
-;;
-;; Delete action group.
-;;
-
-;; Charactor
-(def deletePrevChar (make-editor-action DefaultEditorKit/deletePrevCharAction))
-(def deleteNextChar (make-editor-action DefaultEditorKit/deleteNextCharAction))
-
-;; Word
-(def deletePrevWord (make-editor-action DefaultEditorKit/deletePrevWordAction))
-(def deletenextword (make-editor-action DefaultEditorKit/deleteNextWordAction))
-
-
-;;
-;; Select group.
-;;
-
-(def selectWord (make-editor-action DefaultEditorKit/selectWordAction))
-(def selectLine (make-editor-action DefaultEditorKit/selectLineAction))
-(def selectParagraph (make-editor-action DefaultEditorKit/selectParagraphAction))
-(def selectAll (make-editor-action DefaultEditorKit/selectAllAction))
-
-
-;;
-;; Move selection group.
-;;
-
-;; Selection
-(def selectionBegin (make-editor-action DefaultEditorKit/selectionBeginAction))
-(def selectionEnd (make-editor-action DefaultEditorKit/selectionEndAction))
-
-
-;; Charactor
-(def selectionForward (make-editor-action DefaultEditorKit/selectionForwardAction))
-(def selectionBackward (make-editor-action DefaultEditorKit/selectionBackwardAction))
-
-;; Word
-(def selectionBeginWord (make-editor-action DefaultEditorKit/selectionBeginWordAction))
-(def selectionEndWord (make-editor-action DefaultEditorKit/selectionEndWordAction))
-(def selectionNextWord (make-editor-action DefaultEditorKit/selectionNextWordAction))
-(def selectionPreviousWord (make-editor-action DefaultEditorKit/selectionPreviousWordAction))
-
-;; Line
-(def selectionBeginLine (make-editor-action DefaultEditorKit/selectionBeginLineAction))
-(def selectionEndLine (make-editor-action DefaultEditorKit/selectionEndLineAction))
-(def selectionUp (make-editor-action DefaultEditorKit/selectionUpAction))
-(def selectionDown (make-editor-action DefaultEditorKit/selectionDownAction))
-
-;; Paragraph
-(def selectionBeginParagraph (make-editor-action DefaultEditorKit/selectionBeginParagraphAction))
-(def selectionEndParagraph (make-editor-action DefaultEditorKit/selectionEndParagraphAction))
-
-
-;;
-;; Edit operation group.
-;;
-
-(def copy (make-editor-action DefaultEditorKit/copyAction))
-(def cut (make-editor-action DefaultEditorKit/cutAction))
-(def paste (make-editor-action DefaultEditorKit/pasteAction))
-
-
-;;
-;; Other group.
-;;
-
-(def defaultKeyTyped (make-editor-action DefaultEditorKit/defaultKeyTypedAction))
-(def insertBreak (make-editor-action DefaultEditorKit/insertBreakAction))
-(def insertTab (make-editor-action DefaultEditorKit/insertTabAction))
-(def insertContent (make-editor-action DefaultEditorKit/insertContentAction))
-(def beep (make-editor-action DefaultEditorKit/beepAction))
-(def readOnly (make-editor-action DefaultEditorKit/readOnlyAction))
-(def writable (make-editor-action DefaultEditorKit/writableAction))
-
-
-;;
-;; File action group.
-;;
-
-(defaction openFile
-  [text-pane]
-  (let [chooser   (JFileChooser. (str "~" os-file-separator))
-        result    (. chooser showOpenDialog nil)]
-    (if (= JFileChooser/APPROVE_OPTION result)
-        (. text-pane open (.. chooser getSelectedFile getAbsolutePath)))))
-
-(defaction saveFile
-  [text-pane]
-  (if (= nil (. text-pane getPath))
-      (. text-pane saveAs)
-      (. text-pane save)))
-
-(defaction changeBuffer
-  [text-pane]
-  (println "called 'changeBuffer'."))
-
-;;
-;; Font utilities
-;;
+;
+; Constant
+;
 (def new-title "Untitled")
 
+;
+; Key Maps
+;
+(def maps (make-maps (JTextPane.) JComponent/WHEN_FOCUSED))
+
+;
+; Font utilities
+;
 (defn get-font-names
   []
   (doseq [font (.. GraphicsEnvironment getLocalGraphicsEnvironment getAvailableFontFamilyNames)]
@@ -190,9 +56,13 @@
     (println name " preferred:[" pwidth "," pheight "], normal:[" width "," height "]")))
 
 
+;;------------------------------
 ;;
+;; Text editor creator
+;;
+;;------------------------------
+
 ;; Interfaces
-;;
 (definterface ITextLineNumber
   (setBorderGap [value])
   (setPreferredWidth [])
@@ -204,9 +74,27 @@
   (getTextLineNumber [rowStartOffset])
   (getOffsetX [availableWidth stringWidth])
   (getOffsetY [rowStartOffset fontMetrics])
-  (documentChanged [])
-  )
+  (documentChanged [] ))
 
+(definterface ITextPane
+  (getPath [])
+  (setPath [target])
+  (getModified [])
+  (setModified [modified?])
+  (save [])
+  (saveAs [])
+  (open [target])
+  (getStatusBar [])
+  (getTabs [])
+  (getRoot [])
+  (getTabIndex []))
+
+(definterface ITextEditor
+  (getModified []))
+
+;
+; Text Line Number
+;
 (defn make-text-line-number
   [text-component input-minimumDisplayDigits]
   (let [LEFT                  0.0
@@ -376,6 +264,13 @@
     text-line-number))
 
 
+;
+; Improved InputMethodRequests.
+;
+; (When using the input method, for display the candidate conversion window at the correct position.
+;  But this is only in windows. 
+;  I don't know that why the JVM for linux doesn't call InputMethodRequests/getTextLocation method.)
+;
 (defn make-improved-imr
   [original-imr]
   (proxy [InputMethodRequests] []
@@ -396,26 +291,9 @@
         (. rect setLocation (- (. rect x) 10) (- (. rect y) 45))
         rect))))
 
-(definterface ITextPane
-  (getPath [])
-  (setPath [target])
-  (modified [modified?])
-  (save [])
-  (saveAs [])
-  (open [target])
-  (getStatusBar []))
-
-(defn count-by-pattern
-  [value pattern start end]
-  (loop [idx start
-         cnt 0]
-    (if (< end idx)
-        cnt
-        (let [new-idx (. value indexOf pattern idx)]
-          (if (< new-idx 0)
-              cnt
-              (recur (+ new-idx 1) (+ cnt 1)))))))
-
+;
+; Text Editor
+;
 (defn make-editor
   [tabs]
   (let [;
@@ -431,17 +309,20 @@
         ;
         file-path    (atom nil)
         improved-imr (atom nil)
+        modified     (atom false)
         text-pane    (proxy [JTextPane ITextPane clominal.keys.IKeybindComponent] []
                        (getPath []
                          @file-path)
                        (setPath [path]
                          (let [full-path (get-absolute-path path)]
                            (dosync (reset! file-path full-path))))
-                       (modified [modified?]
+                       (getModified [] @modified)   
+                       (setModified [modified?]
+                         (reset! modified modified?)
                          (if (= nil @file-path)
                              new-title
                              (let [title (. (File. @file-path) getName)
-                                   root  (.. this getParent getParent getParent)
+                                   root  (.. this getRoot)
                                    index (. tabs indexOfComponent root)]
                                (. tabs setTitleAt index (str title (if modified? " *" ""))))))
                        (save
@@ -450,7 +331,7 @@
                            (with-open [stream (FileWriter. (. this getPath))]
                              (doto this
                                (.write stream)
-                               (.modified false)))
+                               (.setModified false)))
                            (catch Exception e
                              (. e printStackTrace)
                              (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION)))))
@@ -462,7 +343,7 @@
                                (doto this
                                  (.setPath (.. chooser getSelectedFile getAbsolutePath))
                                  (.save)
-                                 (.modified false)))))
+                                 (.setModified false)))))
                        (open
                          [target]
                          (let [doc       (. this getDocument)
@@ -475,12 +356,12 @@
                                (with-open [stream (FileInputStream. @file-path)]
                                  (doto this
                                    (.read stream doc)
-                                   (.modified false))
+                                   (.setModified false))
                                  (doto (. this getDocument)
                                    (.addDocumentListener (proxy [DocumentListener] []
                                                            (changedUpdate [evt] )
-                                                           (insertUpdate [evt] (. text-pane modified true))
-                                                           (removeUpdate [evt] (. text-pane modified true))))))
+                                                           (insertUpdate [evt] (. text-pane setModified true))
+                                                           (removeUpdate [evt] (. text-pane setModified true))))))
                                (catch FileNotFoundException _ true)
                                (catch Exception e
                                  (. e printStackTrace)
@@ -501,14 +382,24 @@
                              (let [current (. keystrokes getText)]
                                (. keystrokes setText (if (= current "")
                                                          (keys/str-keystroke keystroke)
-                                                         (str current ", " (keys/str-keystroke keystroke))))))))
+                                                         (str current ", " (keys/str-keystroke keystroke)))))))
+                       (getTabs [] tabs)
+                       (getRoot []
+                         (.. this getParent getParent getParent))
+                       (getTabIndex []
+                         (let [tabs (. this getTabs)
+                               root (. this getRoot)]
+                           (.. tabs indexOfComponent root))))
+
         scroll       (JScrollPane. text-pane
                                    JScrollPane/VERTICAL_SCROLLBAR_ALWAYS
                                    JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)
         ;
         ; Root Panel
         ;
-        root-panel   (proxy [JPanel] []
+        root-panel   (proxy [JPanel ITextEditor] []
+                       (getModified []
+                         (. text-pane getModified))
                        (requestFocusInWindow []
                          (. text-pane requestFocusInWindow)))
                 ;
@@ -532,22 +423,12 @@
       (.setName "text-pane")
       (.setInputMap  JComponent/WHEN_FOCUSED default-inputmap)
       (.setActionMap default-actionmap)
-      (.enableInputMethods true)
-      ; (.addCaretListener (proxy [CaretListener] []
-      ;                      (caretUpdate [evt]
-      ;                        (let [src (. evt getSource)
-      ;                              crt (. src getCaret)
-      ;                              val (. src getText)
-      ;                              dot (. crt getDot)
-      ;                              row (count-by-pattern val "\n" 0 dot)
-      ;                              clm (- dot (. val lastIndexOf "\n" dot))]
-      ;                          (. cursor setText (format cursor-format row clm))))))
-                               )
+      (.enableInputMethods true))
     (doto (. text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
                               (changedUpdate [evt] )
-                              (insertUpdate [evt] (. text-pane modified true))
-                              (removeUpdate [evt] (. text-pane modified true)))))
+                              (insertUpdate [evt] (. text-pane setModified true))
+                              (removeUpdate [evt] (. text-pane setModified true)))))
 
 
     ;
@@ -598,4 +479,172 @@
 
     root-panel
     ))
+
+
+
+;;------------------------------
+;;
+;; Editor actions
+;;
+;;------------------------------
+(defn make-editor-action
+  [action-string]
+  (assert (string? action-string))
+  (let [default-actionmap ((. maps get "default") 1)]
+    (. default-actionmap get action-string)))
+
+;;
+;; Caret move action group.
+;;
+
+;; Charactor
+(def forward (make-editor-action DefaultEditorKit/forwardAction))
+(def backward (make-editor-action DefaultEditorKit/backwardAction))
+
+;; Word
+(def beginWord (make-editor-action DefaultEditorKit/beginWordAction))
+(def endWord (make-editor-action DefaultEditorKit/endWordAction))
+(def nextWord (make-editor-action DefaultEditorKit/nextWordAction))
+(def previousWord (make-editor-action DefaultEditorKit/previousWordAction))
+
+;; Line
+(def up (make-editor-action DefaultEditorKit/upAction))
+(def down (make-editor-action DefaultEditorKit/downAction))
+(def beginLine (make-editor-action DefaultEditorKit/beginLineAction))
+(def endLine (make-editor-action DefaultEditorKit/endLineAction))
+
+;; Paragraph
+(def beginParagraph (make-editor-action DefaultEditorKit/beginParagraphAction))
+(def endParagraph (make-editor-action DefaultEditorKit/endParagraphAction))
+
+;; Page
+(def pageDown (make-editor-action DefaultEditorKit/pageDownAction))
+(def pageUp (make-editor-action DefaultEditorKit/pageUpAction))
+
+;; Document
+(def begin (make-editor-action DefaultEditorKit/beginAction))
+(def end (make-editor-action DefaultEditorKit/endAction))
+
+
+;;
+;; Delete action group.
+;;
+
+;; Charactor
+(def deletePrevChar (make-editor-action DefaultEditorKit/deletePrevCharAction))
+(def deleteNextChar (make-editor-action DefaultEditorKit/deleteNextCharAction))
+
+;; Word
+(def deletePrevWord (make-editor-action DefaultEditorKit/deletePrevWordAction))
+(def deletenextword (make-editor-action DefaultEditorKit/deleteNextWordAction))
+
+
+;;
+;; Select group.
+;;
+
+(def selectWord (make-editor-action DefaultEditorKit/selectWordAction))
+(def selectLine (make-editor-action DefaultEditorKit/selectLineAction))
+(def selectParagraph (make-editor-action DefaultEditorKit/selectParagraphAction))
+(def selectAll (make-editor-action DefaultEditorKit/selectAllAction))
+
+
+;;
+;; Move selection group.
+;;
+
+;; Selection
+(def selectionBegin (make-editor-action DefaultEditorKit/selectionBeginAction))
+(def selectionEnd (make-editor-action DefaultEditorKit/selectionEndAction))
+
+
+;; Charactor
+(def selectionForward (make-editor-action DefaultEditorKit/selectionForwardAction))
+(def selectionBackward (make-editor-action DefaultEditorKit/selectionBackwardAction))
+
+;; Word
+(def selectionBeginWord (make-editor-action DefaultEditorKit/selectionBeginWordAction))
+(def selectionEndWord (make-editor-action DefaultEditorKit/selectionEndWordAction))
+(def selectionNextWord (make-editor-action DefaultEditorKit/selectionNextWordAction))
+(def selectionPreviousWord (make-editor-action DefaultEditorKit/selectionPreviousWordAction))
+
+;; Line
+(def selectionBeginLine (make-editor-action DefaultEditorKit/selectionBeginLineAction))
+(def selectionEndLine (make-editor-action DefaultEditorKit/selectionEndLineAction))
+(def selectionUp (make-editor-action DefaultEditorKit/selectionUpAction))
+(def selectionDown (make-editor-action DefaultEditorKit/selectionDownAction))
+
+;; Paragraph
+(def selectionBeginParagraph (make-editor-action DefaultEditorKit/selectionBeginParagraphAction))
+(def selectionEndParagraph (make-editor-action DefaultEditorKit/selectionEndParagraphAction))
+
+
+;;
+;; Edit operation group.
+;;
+
+(def copy (make-editor-action DefaultEditorKit/copyAction))
+(def cut (make-editor-action DefaultEditorKit/cutAction))
+(def paste (make-editor-action DefaultEditorKit/pasteAction))
+
+
+;;
+;; Other group.
+;;
+
+(def defaultKeyTyped (make-editor-action DefaultEditorKit/defaultKeyTypedAction))
+(def insertBreak (make-editor-action DefaultEditorKit/insertBreakAction))
+(def insertTab (make-editor-action DefaultEditorKit/insertTabAction))
+(def insertContent (make-editor-action DefaultEditorKit/insertContentAction))
+(def beep (make-editor-action DefaultEditorKit/beepAction))
+(def readOnly (make-editor-action DefaultEditorKit/readOnlyAction))
+(def writable (make-editor-action DefaultEditorKit/writableAction))
+
+
+;;
+;; File action group.
+;;
+
+(defaction new-document
+  [tabs]
+  (let [editor (make-editor tabs)]
+    (. tabs addTab new-title editor)
+    (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
+    (. editor requestFocusInWindow)))
+
+(defaction openFile
+  [text-pane]
+  (let [chooser   (JFileChooser. (str "~" os-file-separator))
+        result    (. chooser showOpenDialog nil)]
+    (if (= JFileChooser/APPROVE_OPTION result)
+        (. text-pane open (.. chooser getSelectedFile getAbsolutePath)))))
+
+(defaction saveFile
+  [text-pane]
+  (if (= nil (. text-pane getPath))
+      (. text-pane saveAs)
+      (. text-pane save)))
+
+(defaction changeBuffer
+  [text-pane]
+  (println "called 'changeBuffer'."))
+
+(defaction close
+  [text-pane]
+  (if (. text-pane getModified)
+      (let [option (JOptionPane/showConfirmDialog text-pane
+                                                  "This document is modified.\nDo you save?")]
+        (cond (= option JOptionPane/YES_OPTION)    (do 
+                                                     (if (= nil (. text-pane getPath))
+                                                         (. text-pane saveAs)
+                                                         (. text-pane save))
+                                                     (.. text-pane getTabs (remove (. text-pane getRoot))))
+              (= option JOptionPane/NO_OPTION)     (.. text-pane getTabs (remove (. text-pane getRoot)))
+              :else                                nil))
+      (.. text-pane getTabs (remove (. text-pane getRoot)))))
+                
+      
+(defaction select-tab [tabs]
+  (let [index (. tabs getSelectedIndex)]
+    (. tabs (remove index))))
 
