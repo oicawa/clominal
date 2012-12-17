@@ -90,7 +90,8 @@
   (getTabIndex []))
 
 (definterface ITextEditor
-  (getModified []))
+  (getModified [])
+  (getTextPane []))
 
 ;
 ; Text Line Number
@@ -398,6 +399,8 @@
         ; Root Panel
         ;
         root-panel   (proxy [JPanel ITextEditor] []
+                       (getTextPane []
+                         text-pane)
                        (getModified []
                          (. text-pane getModified))
                        (requestFocusInWindow []
@@ -601,23 +604,30 @@
 (def writable (make-editor-action DefaultEditorKit/writableAction))
 
 
+(defn create-new-tab
+  [tabs title]
+  (let [editor (make-editor tabs)]
+    (. tabs addTab title editor)
+    (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
+    (. editor requestFocusInWindow)
+    editor))
+
 ;;
 ;; File action group.
 ;;
 
-(defaction new-document
+(defaction file-new
   [tabs]
-  (let [editor (make-editor tabs)]
-    (. tabs addTab new-title editor)
-    (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
-    (. editor requestFocusInWindow)))
+  (create-new-tab tabs new-title))
 
-(defaction openFile
-  [text-pane]
+(defaction file-open
+  [tabs]
   (let [chooser   (JFileChooser. (str "~" os-file-separator))
         result    (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)
-        (. text-pane open (.. chooser getSelectedFile getAbsolutePath)))))
+        (let [file-name (.. chooser getSelectedFile getName)
+              editor    (create-new-tab tabs file-name)]
+          (.. editor getTextPane (open (.. chooser getSelectedFile getAbsolutePath)))))))
 
 (defaction saveFile
   [text-pane]

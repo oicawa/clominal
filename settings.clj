@@ -33,7 +33,6 @@
    '(Ctrl \c) editor/copy
    '(Ctrl \v) editor/paste
    '(Ctrl \x) editor/cut
-   '(Ctrl \o) editor/openFile
    '(Ctrl \s) editor/saveFile
    '((Alt \x) \c) editor/close
 
@@ -48,7 +47,8 @@
 
 (def frame-keybind-settings
   {
-   '(Ctrl \n) editor/new-document
+   '(Ctrl \n) editor/file-new
+   '(Ctrl \o) editor/file-open
    ;'(Ctrl \q) frame/quit
   })
 
