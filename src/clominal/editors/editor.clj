@@ -83,7 +83,6 @@
   (setModified [modified?])
   (save [])
   (saveAs [])
-  (open [target])
   (getStatusBar [])
   (getTabs [])
   (getRoot [])
@@ -345,28 +344,6 @@
                                  (.setPath (.. chooser getSelectedFile getAbsolutePath))
                                  (.save)
                                  (.setModified false)))))
-                       (open
-                         [target]
-                         (let [doc       (. this getDocument)
-                               kit       (. this getEditorKit)
-                               file      (File. target)
-                               text-pane this]
-                           (do
-                             (. this setPath target)
-                             (try
-                               (with-open [stream (FileInputStream. @file-path)]
-                                 (doto this
-                                   (.read stream doc)
-                                   (.setModified false))
-                                 (doto (. this getDocument)
-                                   (.addDocumentListener (proxy [DocumentListener] []
-                                                           (changedUpdate [evt] )
-                                                           (insertUpdate [evt] (. text-pane setModified true))
-                                                           (removeUpdate [evt] (. text-pane setModified true))))))
-                               (catch FileNotFoundException _ true)
-                               (catch Exception e
-                                 (. e printStackTrace)
-                                 (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION)))))))
                        (getInputMethodRequests []
                          (if (= nil @improved-imr)
                              (let [original-imr (proxy-super getInputMethodRequests)]
@@ -604,7 +581,7 @@
 (def writable (make-editor-action DefaultEditorKit/writableAction))
 
 
-(defn create-new-tab
+(defn create-document
   [tabs title]
   (let [editor (make-editor tabs)]
     (. tabs addTab title editor)
@@ -612,22 +589,47 @@
     (. editor requestFocusInWindow)
     editor))
 
+(defn file-set
+  [tabs file]
+  (. tabs addTab nil (make-editor tabs))
+  (let [idx    (- (. tabs getTabCount) 1)
+        editor (. tabs getComponentAt idx)]
+    (. tabs setSelectedIndex idx)
+    (. editor requestFocusInWindow)
+    (if (= nil file)
+        (. tabs setTitleAt idx new-title)
+        (let [file-path (. file getAbsolutePath)
+              text-pane (. editor getTextPane)]
+          (. text-pane setPath file-path)
+          (try
+            (with-open [stream (FileInputStream. file-path)]
+              (doto text-pane
+                (.read stream (. text-pane getDocument))
+                (.setModified false))
+              (doto (. text-pane getDocument)
+                (.addDocumentListener (proxy [DocumentListener] []
+                                        (changedUpdate [evt] )
+                                        (insertUpdate [evt] (. text-pane setModified true))
+                                        (removeUpdate [evt] (. text-pane setModified true))))))
+            (catch FileNotFoundException _ true)
+            (catch Exception e
+              (. e printStackTrace)
+              (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION))))))))
+      
 ;;
 ;; File action group.
 ;;
 
 (defaction file-new
   [tabs]
-  (create-new-tab tabs new-title))
+  (file-set tabs nil))
 
 (defaction file-open
   [tabs]
   (let [chooser   (JFileChooser. (str "~" os-file-separator))
         result    (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)
-        (let [file-name (.. chooser getSelectedFile getName)
-              editor    (create-new-tab tabs file-name)]
-          (.. editor getTextPane (open (.. chooser getSelectedFile getAbsolutePath)))))))
+        (file-set tabs (.. chooser getSelectedFile)))))
 
 (defaction saveFile
   [text-pane]
@@ -642,7 +644,7 @@
 (defaction close
   [text-pane]
   (if (. text-pane getModified)
-      (let [option (JOptionPane/showConfirmDialog text-pane
+      (let [option (JOptionPane/showConfirmDialog (. text-pane getTabs)
                                                   "This document is modified.\nDo you save?")]
         (cond (= option JOptionPane/YES_OPTION)    (do 
                                                      (if (= nil (. text-pane getPath))
