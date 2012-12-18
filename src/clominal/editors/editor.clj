@@ -4,7 +4,7 @@
            (java.awt.im InputMethodRequests)
            (java.beans PropertyChangeListener)
            (java.util HashMap)
-           (javax.swing InputMap ActionMap JComponent JTextPane JScrollPane Action
+           (javax.swing JList InputMap ActionMap JComponent JTextPane JScrollPane Action
                         JLabel JTextField JPanel JOptionPane SwingConstants JFileChooser
                         SwingUtilities AbstractAction)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
@@ -12,6 +12,7 @@
            (javax.swing.text StyleConstants Utilities DefaultEditorKit)
            (java.io File FileInputStream FileWriter FileNotFoundException))
   (:require [clominal.keys :as keys])
+  (:require [clominal.dialog :as dialog])
   (:use [clominal.utils]))
 
 ;;------------------------------
@@ -310,6 +311,7 @@
         file-path    (atom nil)
         improved-imr (atom nil)
         modified     (atom false)
+        ime-mode     (atom nil)
         text-pane    (proxy [JTextPane ITextPane clominal.keys.IKeybindComponent] []
                        (getPath []
                          @file-path)
@@ -350,8 +352,17 @@
                                (reset! improved-imr (make-improved-imr original-imr))
                                @improved-imr)
                              @improved-imr))
-                       (setEditEnable [value]
-                         (. this setEditable value))
+                       (setImeEnable [value]
+                         (if (windows?)
+                             (let [ic (. this getInputContext)]
+                               (if value
+                                   (do
+                                     (. ic setCompositionEnabled (if (= nil @ime-mode) (. ic isCompositionEnabled) @ime-mode))
+                                     (reset! ime-mode nil))
+                                   (do
+                                     (reset! ime-mode (. ic isCompositionEnabled))
+                                     (. ic setCompositionEnabled false))))
+                             (. this setEditable value)))
                        (setInputMap [inputmap] (. this setInputMap JComponent/WHEN_FOCUSED inputmap))
                        (setActionMap [actionmap] (proxy-super setActionMap actionmap))
                        (setKeyStroke [keystroke]
@@ -630,6 +641,26 @@
         result    (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)
         (file-set tabs (.. chooser getSelectedFile)))))
+; (defaction file-open
+;   [tabs]
+;   (let [panel  (doto (JPanel.)
+;                  (.setLayout (GridBagLayout.))
+;                  (grid-bag-layout
+;                    :gridx 0, :gridy 0
+;                    :fill :HORIZONTAL
+;                    :anchor :WEST
+;                    :weightx 1.0
+;                    :weighty 0.0
+;                    (JTextField.)
+;                    :gridx 0, :gridy 1
+;                    :fill :BOTH
+;                    :weighty 1.0
+;                    (doto (JList.)
+;                      (.setListData (into-array ["hoge" "fuga" "moga"])))
+;                    ))
+;         dialog (dialog/make-dialog "File open" panel)
+;         result (. dialog setVisible true)]
+;     (println "Show File Open Dialog.")))
 
 (defaction saveFile
   [text-pane]

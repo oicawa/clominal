@@ -35,9 +35,11 @@
   "Create clominal main frame."
   [mode]
   (let [tabs           (proxy [JTabbedPane clominal.keys.IKeybindComponent] []
-                         (setEditEnable [value])
+                         (setImeEnable [value])
                          (setInputMap [inputmap]
-                           (. this setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW inputmap))
+                           ;(. this setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW inputmap)
+                           (. this setInputMap JComponent/WHEN_ANCESTOR_OF_FOCUSED_COMPONENT inputmap)
+                           )
                          (setActionMap [actionmap]
                            (proxy-super setActionMap actionmap))
                          (setKeyStroke [keystroke]))

@@ -6,7 +6,7 @@
            (java.awt.event InputEvent KeyEvent)))
 
 (definterface IKeybindComponent
-  (setEditEnable [value])
+  (setImeEnable [value])
   (setInputMap [inputmap])
   (setActionMap [actionmap])
   (setKeyStroke [keystroke]))
@@ -18,7 +18,7 @@
       (actionPerformed [evt]
         (let [component (. evt getSource)]
           (doto component
-            (.setEditEnable is-last?)
+            (.setImeEnable is-last?)
             (.setInputMap inputmap)
             (.setActionMap actionmap))
           (if is-last?
