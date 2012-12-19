@@ -18,14 +18,14 @@
    '(Ctrl \l) editor/forward
 
    '(Alt \h) editor/previousWord
+   '(Alt \l) editor/nextWord
+   '(Alt Shift \h) editor/beginLine
+   '(Alt Shift \l) editor/endLine
+
    '(Alt \j) editor/pageDown
    '(Alt \k) editor/pageUp
-   '(Alt \l) editor/nextWord
-
-   '(Alt Shift \h) editor/beginLine
-   '(Alt Shift \j) editor/endLine
+   '(Alt Shift \j) editor/end
    '(Alt Shift \k) editor/begin
-   '(Alt Shift \l) editor/end
 
    '(Ctrl \b) editor/deletePrevChar
    '(Ctrl \d) editor/deleteNextChar
@@ -49,6 +49,8 @@
   {
    '(Ctrl \n) editor/file-new
    '(Ctrl \o) editor/file-open
+   '((Alt \f) \n) editor/file-new
+   '((Alt \f) \o) editor/file-open
    ;'(Ctrl \q) frame/quit
   })
 
