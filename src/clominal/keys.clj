@@ -1,9 +1,10 @@
 (ns clominal.keys
   (:use [clojure.contrib.def]
         [clominal.utils])
-  (:import (javax.swing AbstractAction InputMap ActionMap JComponent KeyStroke SwingUtilities)
+  (:import (javax.swing AbstractAction InputMap ActionMap JComponent KeyStroke SwingUtilities ComponentInputMap)
            (java.awt Toolkit)
-           (java.awt.event InputEvent KeyEvent)))
+           (java.awt.event InputEvent KeyEvent)
+           (java.util HashMap)))
 
 (definterface IKeybindComponent
   (setImeEnable [value])
@@ -11,16 +12,59 @@
   (setActionMap [actionmap])
   (setKeyStroke [keystroke]))
 
+; (defn make-maps
+;   [component mode]
+;   (doto (HashMap.)
+;     (.put "default" [(. component getInputMap mode)
+;                      (. component getActionMap)])))
+
+(definterface IKeyMaps
+  (get [stroke-name]))
+
+(definterface IKeyMap
+  (getInputMap [])
+  (getActionMap [])
+  (put [stroke-name stroke key-action]))
+
+(defn make-keymap
+  [iptmap actmap]
+  (proxy [IKeyMap] []
+     (getInputMap [] iptmap)
+     (getActionMap [] actmap)
+     (put [stroke-name stroke key-action]
+       (. iptmap put stroke stroke-name)
+       (. actmap put stroke-name key-action))))
+(defn make-keymap-with-component
+  [component mode]
+  (let [iptmap (if (= mode JComponent/WHEN_IN_FOCUSED_WINDOW)
+                   (ComponentInputMap. component)
+                   (InputMap.))
+        actmap (ActionMap.)]
+    (make-keymap iptmap actmap)))
+
+(defn make-keymaps
+  [component mode]
+  (let [hash (HashMap.)
+        maps (proxy [IKeyMaps] []
+               (get [stroke-name]
+                 (if (not (. hash containsKey stroke-name))
+                     (. hash put stroke-name (make-keymap-with-component component mode)))
+                 (. hash get stroke-name)))]
+    (let [default-iptmap (. component getInputMap mode)
+          default-actmap (. component getActionMap)]
+      (. hash put "default" (make-keymap default-iptmap default-actmap)))
+    maps))
+
 (defn make-key-action
-  [act inputmap actionmap]
+  [act keymap]
   (let [is-last? (not (instance? KeyStroke act))]
     (proxy [AbstractAction] []
       (actionPerformed [evt]
         (let [component (. evt getSource)]
           (doto component
             (.setImeEnable is-last?)
-            (.setInputMap inputmap)
-            (.setActionMap actionmap))
+            (.setInputMap (. keymap getInputMap))
+            (.setActionMap (. keymap getActionMap)))
           (if is-last?
               (do
                 (. component setKeyStroke nil)
@@ -103,35 +147,54 @@
     (str mod "+" key)))
 
 
+; (defn define-keybind
+;   "Define key bind for specified operation for one stroke or more."
+;   [maps key-bind operation]
+;   (let [default-maps      (. maps get "default")
+;         default-inputmap  (default-maps 0)
+;         default-actionmap (default-maps 1)
+;         all-strokes       (get-key-strokes key-bind)]
+;     (if (seq? all-strokes)
+;         (loop [inputmap    default-inputmap
+;                actionmap   default-actionmap
+;                stroke      (first all-strokes)
+;                strokes     (rest all-strokes)]
+;           (let [stroke-name (str stroke)]
+;             (if (= nil (first strokes))
+;                 (do
+;                   (. inputmap  put stroke stroke-name)
+;                   (. actionmap put stroke-name (make-key-action operation default-inputmap default-actionmap)))
+;                 (let [map-vec        (let [m (. maps get stroke-name)]
+;                                        (if (= nil m)
+;                                            (do
+;                                              (. maps put stroke-name [(InputMap.) (ActionMap.)])
+;                                              (. maps get stroke-name))
+;                                            m))
+;                       next-inputmap  (map-vec 0)
+;                       next-actionmap (map-vec 1)
+;                       middle-action  (make-key-action stroke next-inputmap next-actionmap)]
+;                   (. inputmap  put stroke stroke-name)
+;                   (. actionmap put stroke-name middle-action)
+;                   (recur next-inputmap next-actionmap (first strokes) (rest strokes))))))
+;         (do
+;           (. default-inputmap  put all-strokes (str all-strokes))
+;           (. default-actionmap put (str all-strokes) (make-key-action operation default-inputmap default-actionmap))))))
+
+
+
 (defn define-keybind
   "Define key bind for specified operation for one stroke or more."
   [maps key-bind operation]
-  (let [default-maps      (. maps get "default")
-        default-inputmap  (default-maps 0)
-        default-actionmap (default-maps 1)
-        all-strokes       (get-key-strokes key-bind)]
+  (let [default-map (. maps get "default")
+        all-strokes (get-key-strokes key-bind)]
     (if (seq? all-strokes)
-        (loop [inputmap    default-inputmap
-               actionmap   default-actionmap
-               stroke      (first all-strokes)
-               strokes     (rest all-strokes)]
+        (loop [this-map default-map
+               stroke   (first all-strokes)
+               strokes  (rest all-strokes)]
           (let [stroke-name (str stroke)]
             (if (= nil (first strokes))
-                (do
-                  (. inputmap  put stroke stroke-name)
-                  (. actionmap put stroke-name (make-key-action operation default-inputmap default-actionmap)))
-                (let [map-vec        (let [m (. maps get stroke-name)]
-                                       (if (= nil m)
-                                           (do
-                                             (. maps put stroke-name [(InputMap.) (ActionMap.)])
-                                             (. maps get stroke-name))
-                                           m))
-                      next-inputmap  (map-vec 0)
-                      next-actionmap (map-vec 1)
-                      middle-action  (make-key-action stroke next-inputmap next-actionmap)]
-                  (. inputmap  put stroke stroke-name)
-                  (. actionmap put stroke-name middle-action)
-                  (recur next-inputmap next-actionmap (first strokes) (rest strokes))))))
-        (do
-          (. default-inputmap  put all-strokes (str all-strokes))
-          (. default-actionmap put (str all-strokes) (make-key-action operation default-inputmap default-actionmap))))))
+                (. this-map put stroke-name stroke (make-key-action operation default-map))
+                (let [next-map (. maps get stroke-name)]
+                  (. this-map  put stroke-name stroke (make-key-action stroke next-map))
+                  (recur next-map (first strokes) (rest strokes))))))
+        (. default-map put (str all-strokes) all-strokes (make-key-action operation default-map)))))

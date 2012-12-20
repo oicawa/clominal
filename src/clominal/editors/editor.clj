@@ -10,6 +10,7 @@
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
            (javax.swing.event CaretListener DocumentListener)
            (javax.swing.text StyleConstants Utilities DefaultEditorKit)
+           (javax.swing.undo UndoManager)
            (java.io File FileInputStream FileWriter FileNotFoundException))
   (:require [clominal.keys :as keys])
   (:require [clominal.dialog :as dialog])
@@ -29,7 +30,7 @@
 ;
 ; Key Maps
 ;
-(def maps (make-maps (JTextPane.) JComponent/WHEN_FOCUSED))
+(def maps (keys/make-keymaps (JTextPane.) JComponent/WHEN_FOCUSED))
 
 ;
 ; Font utilities
@@ -87,7 +88,8 @@
   (getStatusBar [])
   (getTabs [])
   (getRoot [])
-  (getTabIndex []))
+  (getTabIndex [])
+  (getUndoManager []))
 
 (definterface ITextEditor
   (getModified [])
@@ -312,6 +314,7 @@
         improved-imr (atom nil)
         modified     (atom false)
         ime-mode     (atom nil)
+        um           (UndoManager.)
         text-pane    (proxy [JTextPane ITextPane clominal.keys.IKeybindComponent] []
                        (getPath []
                          @file-path)
@@ -378,7 +381,9 @@
                        (getTabIndex []
                          (let [tabs (. this getTabs)
                                root (. this getRoot)]
-                           (.. tabs indexOfComponent root))))
+                           (.. tabs indexOfComponent root)))
+                       (getUndoManager []
+                         um))
 
         scroll       (JScrollPane. text-pane
                                    JScrollPane/VERTICAL_SCROLLBAR_ALWAYS
@@ -401,9 +406,7 @@
         ;
         ; Others
         ;
-        map-vec           (. maps get "default")
-        default-inputmap  (map-vec 0)
-        default-actionmap (map-vec 1)
+        default-map       (. maps get "default")
         default-fonts     {:linux   ["Takaoゴシック" Font/PLAIN 14]
                            :windows ["ＭＳ ゴシック" Font/PLAIN 14]}
         ]
@@ -412,14 +415,15 @@
     ;
     (doto text-pane
       (.setName "text-pane")
-      (.setInputMap  JComponent/WHEN_FOCUSED default-inputmap)
-      (.setActionMap default-actionmap)
+      (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
+      (.setActionMap (. default-map getActionMap))
       (.enableInputMethods true))
     (doto (. text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
                               (changedUpdate [evt] )
                               (insertUpdate [evt] (. text-pane setModified true))
-                              (removeUpdate [evt] (. text-pane setModified true)))))
+                              (removeUpdate [evt] (. text-pane setModified true))))
+      (.addUndoableEditListener um))
 
 
     ;
@@ -481,8 +485,8 @@
 (defn make-editor-action
   [action-string]
   (assert (string? action-string))
-  (let [default-actionmap ((. maps get "default") 1)]
-    (. default-actionmap get action-string)))
+  (let [default-actmap (.. maps (get "default") getActionMap)]
+    (. default-actmap get action-string)))
 
 ;;
 ;; Caret move action group.
@@ -592,13 +596,26 @@
 (def writable (make-editor-action DefaultEditorKit/writableAction))
 
 
-(defn create-document
-  [tabs title]
-  (let [editor (make-editor tabs)]
-    (. tabs addTab title editor)
-    (. tabs setSelectedIndex (- (. tabs getTabCount) 1))
-    (. editor requestFocusInWindow)
-    editor))
+;;
+;; Edit action group.
+;;
+
+(defaction undo
+  [text-pane]
+  (let [um (. text-pane getUndoManager)]
+    (if (. um canUndo)
+        (. um undo))))
+
+(defaction redo
+  [text-pane]
+  (let [um (. text-pane getUndoManager)]
+    (if (. um canRedo)
+        (. um redo))))
+
+
+;;
+;; File action group.
+;;
 
 (defn file-set
   [tabs file]
@@ -627,10 +644,6 @@
               (. e printStackTrace)
               (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION))))))))
       
-;;
-;; File action group.
-;;
-
 (defaction file-new
   [tabs]
   (file-set tabs nil))
@@ -641,49 +654,25 @@
         result    (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)
         (file-set tabs (.. chooser getSelectedFile)))))
-; (defaction file-open
-;   [tabs]
-;   (let [panel  (doto (JPanel.)
-;                  (.setLayout (GridBagLayout.))
-;                  (grid-bag-layout
-;                    :gridx 0, :gridy 0
-;                    :fill :HORIZONTAL
-;                    :anchor :WEST
-;                    :weightx 1.0
-;                    :weighty 0.0
-;                    (JTextField.)
-;                    :gridx 0, :gridy 1
-;                    :fill :BOTH
-;                    :weighty 1.0
-;                    (doto (JList.)
-;                      (.setListData (into-array ["hoge" "fuga" "moga"])))
-;                    ))
-;         dialog (dialog/make-dialog "File open" panel)
-;         result (. dialog setVisible true)]
-;     (println "Show File Open Dialog.")))
 
-(defaction saveFile
+(defaction file-save
   [text-pane]
   (if (= nil (. text-pane getPath))
       (. text-pane saveAs)
       (. text-pane save)))
-
-(defaction changeBuffer
-  [text-pane]
-  (println "called 'changeBuffer'."))
 
 (defaction close
   [text-pane]
   (if (. text-pane getModified)
       (let [option (JOptionPane/showConfirmDialog (. text-pane getTabs)
                                                   "This document is modified.\nDo you save?")]
-        (cond (= option JOptionPane/YES_OPTION)    (do 
-                                                     (if (= nil (. text-pane getPath))
-                                                         (. text-pane saveAs)
-                                                         (. text-pane save))
-                                                     (.. text-pane getTabs (remove (. text-pane getRoot))))
-              (= option JOptionPane/NO_OPTION)     (.. text-pane getTabs (remove (. text-pane getRoot)))
-              :else                                nil))
+        (cond (= option JOptionPane/YES_OPTION) (do 
+                                                  (if (= nil (. text-pane getPath))
+                                                      (. text-pane saveAs)
+                                                      (. text-pane save))
+                                                  (.. text-pane getTabs (remove (. text-pane getRoot))))
+              (= option JOptionPane/NO_OPTION)  (.. text-pane getTabs (remove (. text-pane getRoot)))
+              :else                             nil))
       (.. text-pane getTabs (remove (. text-pane getRoot)))))
                 
       

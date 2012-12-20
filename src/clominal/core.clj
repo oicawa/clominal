@@ -2,8 +2,7 @@
 (javax.swing.UIManager/setLookAndFeel "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
 
 (ns clominal.core
-  (:require [clominal.frame :as frame]
-            [settings])
+  (:require [clominal.frame :as frame])
   (:import (javax.swing SwingUtilities)))
 
 (defn main [& args]

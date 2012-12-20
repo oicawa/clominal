@@ -7,11 +7,6 @@
   (:use [clominal.utils]))
 
 ;;
-;; InputMap & ActionMap
-;;
-(def maps (make-maps (JTabbedPane.) JComponent/WHEN_IN_FOCUSED_WINDOW))
-
-;;
 ;; Actions
 ;;
 (defaction select-tab [tabs]
@@ -34,26 +29,30 @@
 (defn make-frame
   "Create clominal main frame."
   [mode]
-  (let [tabs           (proxy [JTabbedPane clominal.keys.IKeybindComponent] []
-                         (setImeEnable [value])
-                         (setInputMap [inputmap]
-                           ;(. this setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW inputmap)
-                           (. this setInputMap JComponent/WHEN_ANCESTOR_OF_FOCUSED_COMPONENT inputmap)
-                           )
-                         (setActionMap [actionmap]
-                           (proxy-super setActionMap actionmap))
-                         (setKeyStroke [keystroke]))
-        tabs-inputmap  ((. maps get "default") 0)
-        tabs-actionmap ((. maps get "default") 1)
-        frame          (JFrame.)
-        close-option   (if (= mode "d")
-                           JFrame/DISPOSE_ON_CLOSE
-                           JFrame/EXIT_ON_CLOSE)]
-    (doto tabs
-      (.setTabPlacement JTabbedPane/TOP)
-      (.setTabLayoutPolicy JTabbedPane/SCROLL_TAB_LAYOUT)
-      (.setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW tabs-inputmap)
-      (.setActionMap tabs-actionmap))
+  (let [ime-mode     (atom nil)
+        tabs         (proxy [JTabbedPane clominal.keys.IKeybindComponent] []
+                       (setImeEnable [value])
+                       (setInputMap [inputmap]
+                         (. this setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW inputmap))
+                       (setActionMap [actionmap]
+                         (proxy-super setActionMap actionmap))
+                       (setKeyStroke [keystroke]))
+        frame        (JFrame.)
+        close-option (if (= mode "d")
+                         JFrame/DISPOSE_ON_CLOSE
+                         JFrame/EXIT_ON_CLOSE)]
+    ;;
+    ;; InputMap & ActionMap
+    ;;
+    (def maps (keys/make-keymaps tabs JComponent/WHEN_IN_FOCUSED_WINDOW))
+    (require 'settings)
+    (let [tabs-map (. maps get "default")]
+      (doto tabs
+        (.setTabPlacement JTabbedPane/TOP)
+        (.setTabLayoutPolicy JTabbedPane/SCROLL_TAB_LAYOUT)
+        ; (.setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW (. tabs-map getInputMap))
+        ; (.setActionMap (. tabs-map getActionMap))
+        ))
 
     (doto frame
       (.setTitle "clominal")
@@ -75,6 +74,6 @@
                                           :else                             nil))
                                   ))
                             (windowClosed [evt]
-                              (System/exit 0))))
-      )))
+                              (System/exit 0)))))
+    ))
 

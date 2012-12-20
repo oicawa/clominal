@@ -33,10 +33,13 @@
    '(Ctrl \c) editor/copy
    '(Ctrl \v) editor/paste
    '(Ctrl \x) editor/cut
-   '(Ctrl \s) editor/saveFile
-   '((Alt \x) \c) editor/close
+   '(Ctrl \s) editor/file-save
+   '((Alt \f) \c) editor/close
 
    '(Ctrl \a) editor/selectAll
+
+   '(Ctrl \z) editor/undo
+   '(Ctrl \y) editor/redo
   })
 
 (doseq [setting editor-keybind-settings]
@@ -49,8 +52,6 @@
   {
    '(Ctrl \n) editor/file-new
    '(Ctrl \o) editor/file-open
-   '((Alt \f) \n) editor/file-new
-   '((Alt \f) \o) editor/file-open
    ;'(Ctrl \q) frame/quit
   })
 

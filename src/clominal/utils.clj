@@ -96,11 +96,6 @@
         (string/join os-file-separator (cons (System/getProperty "user.home") body))
         (. (File. path) getAbsolutePath))))
 
-(defn make-maps 
-  [component mode]
-  (doto (HashMap.)
-    (.put "default" [(. component getInputMap mode)
-                     (. component getActionMap)])))
 
 ;;
 ;; Action macro
