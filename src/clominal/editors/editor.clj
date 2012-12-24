@@ -89,7 +89,9 @@
   (getTabs [])
   (getRoot [])
   (getTabIndex [])
-  (getUndoManager []))
+  (getUndoManager [])
+  (isMark [])
+  (setMark [position]))
 
 (definterface ITextEditor
   (getModified [])
@@ -315,6 +317,7 @@
         modified     (atom false)
         ime-mode     (atom nil)
         um           (UndoManager.)
+        is-marked    (atom false)
         text-pane    (proxy [JTextPane ITextPane clominal.keys.IKeybindComponent] []
                        (getPath []
                          @file-path)
@@ -383,7 +386,10 @@
                                root (. this getRoot)]
                            (.. tabs indexOfComponent root)))
                        (getUndoManager []
-                         um))
+                         um)
+                       (isMark [] @is-marked)
+                       (setMark [marked]
+                         (reset! is-marked marked)))
 
         scroll       (JScrollPane. text-pane
                                    JScrollPane/VERTICAL_SCROLLBAR_ALWAYS
@@ -418,6 +424,7 @@
       (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
       (.setActionMap (. default-map getActionMap))
       (.enableInputMethods true))
+
     (doto (. text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
                               (changedUpdate [evt] )
@@ -482,43 +489,88 @@
 ;; Editor actions
 ;;
 ;;------------------------------
-(defn make-editor-action
+(defn get-default-editor-action
   [action-string]
   (assert (string? action-string))
   (let [default-actmap (.. maps (get "default") getActionMap)]
     (. default-actmap get action-string)))
+
+(defn caret-action
+  [text-pane evt normal selection]
+  (if (. text-pane isMark)
+      (. (get-default-editor-action selection) actionPerformed evt)
+      (. (get-default-editor-action normal) actionPerformed evt)))
+
+(defmacro defaction-with-default
+  [name bindings & body]
+  (assert (vector? bindings))
+  (let [cnt (count bindings)]
+    (assert (and (<= 1 cnt) (<= cnt 2)))
+    (let [source (bindings 0)]
+      (if (= cnt 1)
+          (let [evt (gensym "evt")]
+            `(def ~name (proxy [AbstractAction] []
+                          (actionPerformed [~evt]
+                            ((fn [~source] ~@body)
+                             (. ~evt getSource))))))
+          (let [evt (bindings 1)]
+            `(def ~name (proxy [AbstractAction] []
+                          (actionPerformed [~evt]
+                            ((fn [~source ~evt] ~@body)
+                             (. ~evt getSource)
+                             ~evt)))))))))
 
 ;;
 ;; Caret move action group.
 ;;
 
 ;; Charactor
-(def forward (make-editor-action DefaultEditorKit/forwardAction))
-(def backward (make-editor-action DefaultEditorKit/backwardAction))
+(defaction forward-char [text-pane evt] (caret-action text-pane evt DefaultEditorKit/forwardAction DefaultEditorKit/selectionForwardAction))
+(defaction backward-char [text-pane evt] (caret-action text-pane evt DefaultEditorKit/backwardAction DefaultEditorKit/selectionBackwardAction))
 
 ;; Word
-(def beginWord (make-editor-action DefaultEditorKit/beginWordAction))
-(def endWord (make-editor-action DefaultEditorKit/endWordAction))
-(def nextWord (make-editor-action DefaultEditorKit/nextWordAction))
-(def previousWord (make-editor-action DefaultEditorKit/previousWordAction))
+(defaction begin-word [text-pane evt] (caret-action text-pane evt DefaultEditorKit/beginWordAction DefaultEditorKit/selectionBeginWordAction))
+(defaction end-word [text-pane evt] (caret-action text-pane evt DefaultEditorKit/endWordAction DefaultEditorKit/selectionEndWordAction))
+(defaction forward-word [text-pane evt] (caret-action text-pane evt DefaultEditorKit/nextWordAction DefaultEditorKit/selectionNextWordAction))
+(defaction backward-word [text-pane evt] (caret-action text-pane evt DefaultEditorKit/previousWordAction DefaultEditorKit/selectionPreviousWordAction))
 
 ;; Line
-(def up (make-editor-action DefaultEditorKit/upAction))
-(def down (make-editor-action DefaultEditorKit/downAction))
-(def beginLine (make-editor-action DefaultEditorKit/beginLineAction))
-(def endLine (make-editor-action DefaultEditorKit/endLineAction))
+(defaction previous-line [text-pane evt] (caret-action text-pane evt DefaultEditorKit/upAction DefaultEditorKit/selectionUpAction))
+(defaction next-line [text-pane evt] (caret-action text-pane evt DefaultEditorKit/downAction DefaultEditorKit/selectionDownAction))
+(defaction begin-line [text-pane evt] (caret-action text-pane evt DefaultEditorKit/beginLineAction DefaultEditorKit/selectionBeginLineAction))
+(defaction end-line [text-pane evt] (caret-action text-pane evt DefaultEditorKit/endLineAction DefaultEditorKit/selectionEndLineAction))
 
 ;; Paragraph
-(def beginParagraph (make-editor-action DefaultEditorKit/beginParagraphAction))
-(def endParagraph (make-editor-action DefaultEditorKit/endParagraphAction))
+(defaction begin-paragraph [text-pane evt]
+  (caret-action text-pane evt DefaultEditorKit/beginParagraphAction DefaultEditorKit/selectionBeginParagraphAction))
+(defaction end-paragraph [text-pane evt]
+  (caret-action text-pane evt DefaultEditorKit/endParagraphAction DefaultEditorKit/selectionEndParagraphAction))
 
 ;; Page
-(def pageDown (make-editor-action DefaultEditorKit/pageDownAction))
-(def pageUp (make-editor-action DefaultEditorKit/pageUpAction))
+(defaction previous-page [text-pane evt]
+  (if (. text-pane isMark)
+      (do
+        (println "Next page with selecting action has *NOT Implemented*.")
+        )
+      ; (let [caret-position (. text-component getCaretPosition)
+      ;       root           (.. text-component getDocument getDefaultRootElement)
+      ;       offset         (. root getStartOffset)
+      ;       offset-index   (. root getElementIndex rowStartOffset)
+      ;       caret-index    (. root getElementIndex caretPosition)]
+
+      ;   )
+      (. (get-default-editor-action DefaultEditorKit/pageUpAction) actionPerformed evt)))
+
+(defaction next-page [text-pane evt]
+  (if (. text-pane isMark)
+      (do
+        (println "Next page with selecting action has *NOT Implemented*.")
+        )
+      (. (get-default-editor-action DefaultEditorKit/pageDownAction) actionPerformed evt)))
 
 ;; Document
-(def begin (make-editor-action DefaultEditorKit/beginAction))
-(def end (make-editor-action DefaultEditorKit/endAction))
+(defaction begin-buffer [text-pane evt] (caret-action text-pane evt DefaultEditorKit/beginAction DefaultEditorKit/selectionBeginAction))
+(defaction end-buffer [text-pane evt] (caret-action text-pane evt DefaultEditorKit/endAction DefaultEditorKit/selectionEndAction))
 
 
 ;;
@@ -526,74 +578,56 @@
 ;;
 
 ;; Charactor
-(def deletePrevChar (make-editor-action DefaultEditorKit/deletePrevCharAction))
-(def deleteNextChar (make-editor-action DefaultEditorKit/deleteNextCharAction))
+(def deletePrevChar (get-default-editor-action DefaultEditorKit/deletePrevCharAction))
+(def deleteNextChar (get-default-editor-action DefaultEditorKit/deleteNextCharAction))
 
 ;; Word
-(def deletePrevWord (make-editor-action DefaultEditorKit/deletePrevWordAction))
-(def deletenextword (make-editor-action DefaultEditorKit/deleteNextWordAction))
+(def deletePrevWord (get-default-editor-action DefaultEditorKit/deletePrevWordAction))
+(def deletenextword (get-default-editor-action DefaultEditorKit/deleteNextWordAction))
 
 
 ;;
 ;; Select group.
 ;;
 
-(def selectWord (make-editor-action DefaultEditorKit/selectWordAction))
-(def selectLine (make-editor-action DefaultEditorKit/selectLineAction))
-(def selectParagraph (make-editor-action DefaultEditorKit/selectParagraphAction))
-(def selectAll (make-editor-action DefaultEditorKit/selectAllAction))
+(def selectWord (get-default-editor-action DefaultEditorKit/selectWordAction))
+(def selectLine (get-default-editor-action DefaultEditorKit/selectLineAction))
+(def selectParagraph (get-default-editor-action DefaultEditorKit/selectParagraphAction))
+(def selectAll (get-default-editor-action DefaultEditorKit/selectAllAction))
 
 
 ;;
 ;; Move selection group.
 ;;
 
-;; Selection
-(def selectionBegin (make-editor-action DefaultEditorKit/selectionBeginAction))
-(def selectionEnd (make-editor-action DefaultEditorKit/selectionEndAction))
-
-
-;; Charactor
-(def selectionForward (make-editor-action DefaultEditorKit/selectionForwardAction))
-(def selectionBackward (make-editor-action DefaultEditorKit/selectionBackwardAction))
-
-;; Word
-(def selectionBeginWord (make-editor-action DefaultEditorKit/selectionBeginWordAction))
-(def selectionEndWord (make-editor-action DefaultEditorKit/selectionEndWordAction))
-(def selectionNextWord (make-editor-action DefaultEditorKit/selectionNextWordAction))
-(def selectionPreviousWord (make-editor-action DefaultEditorKit/selectionPreviousWordAction))
-
-;; Line
-(def selectionBeginLine (make-editor-action DefaultEditorKit/selectionBeginLineAction))
-(def selectionEndLine (make-editor-action DefaultEditorKit/selectionEndLineAction))
-(def selectionUp (make-editor-action DefaultEditorKit/selectionUpAction))
-(def selectionDown (make-editor-action DefaultEditorKit/selectionDownAction))
-
-;; Paragraph
-(def selectionBeginParagraph (make-editor-action DefaultEditorKit/selectionBeginParagraphAction))
-(def selectionEndParagraph (make-editor-action DefaultEditorKit/selectionEndParagraphAction))
 
 
 ;;
 ;; Edit operation group.
 ;;
 
-(def copy (make-editor-action DefaultEditorKit/copyAction))
-(def cut (make-editor-action DefaultEditorKit/cutAction))
-(def paste (make-editor-action DefaultEditorKit/pasteAction))
+(defaction copy [text-pane evt]
+  (. (get-default-editor-action DefaultEditorKit/copyAction) actionPerformed evt)
+  (. text-pane setMark false))
+
+(defaction cut [text-pane evt]
+  (. (get-default-editor-action DefaultEditorKit/cutAction) actionPerformed evt)
+  (. text-pane setMark false))
+
+(def paste (get-default-editor-action DefaultEditorKit/pasteAction))
 
 
 ;;
 ;; Other group.
 ;;
 
-(def defaultKeyTyped (make-editor-action DefaultEditorKit/defaultKeyTypedAction))
-(def insertBreak (make-editor-action DefaultEditorKit/insertBreakAction))
-(def insertTab (make-editor-action DefaultEditorKit/insertTabAction))
-(def insertContent (make-editor-action DefaultEditorKit/insertContentAction))
-(def beep (make-editor-action DefaultEditorKit/beepAction))
-(def readOnly (make-editor-action DefaultEditorKit/readOnlyAction))
-(def writable (make-editor-action DefaultEditorKit/writableAction))
+(def defaultKeyTyped (get-default-editor-action DefaultEditorKit/defaultKeyTypedAction))
+(def insertBreak (get-default-editor-action DefaultEditorKit/insertBreakAction))
+(def insertTab (get-default-editor-action DefaultEditorKit/insertTabAction))
+(def insertContent (get-default-editor-action DefaultEditorKit/insertContentAction))
+(def beep (get-default-editor-action DefaultEditorKit/beepAction))
+(def readOnly (get-default-editor-action DefaultEditorKit/readOnlyAction))
+(def writable (get-default-editor-action DefaultEditorKit/writableAction))
 
 
 ;;
@@ -612,6 +646,15 @@
     (if (. um canRedo)
         (. um redo))))
 
+(defaction mark
+  [text-pane]
+  (. text-pane setMark true)
+  (println "setMark :" (. text-pane isMark)))
+
+(defaction escape
+  [text-pane]
+  (. text-pane setMark false)
+  (println "setMark :" (. text-pane isMark)))
 
 ;;
 ;; File action group.
@@ -679,4 +722,5 @@
 (defaction select-tab [tabs]
   (let [index (. tabs getSelectedIndex)]
     (. tabs (remove index))))
+
 

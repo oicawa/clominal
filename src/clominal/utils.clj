@@ -103,10 +103,18 @@
 (defmacro defaction
   [name bindings & body]
   (assert (vector? bindings))
-  (assert (= 1 (count bindings)))
-  (let [source (bindings 0)
-        evt    (gensym "evt")]
-    `(def ~name (proxy [AbstractAction] []
-                  (actionPerformed [~evt]
-                    ((fn [~source] ~@body)
-                     (. ~evt getSource)))))))
+  (let [cnt (count bindings)]
+    (assert (and (<= 1 cnt) (<= cnt 2)))
+    (let [source (bindings 0)]
+      (if (= cnt 1)
+          (let [evt (gensym "evt")]
+            `(def ~name (proxy [AbstractAction] []
+                          (actionPerformed [~evt]
+                            ((fn [~source] ~@body)
+                             (. ~evt getSource))))))
+          (let [evt (bindings 1)]
+            `(def ~name (proxy [AbstractAction] []
+                          (actionPerformed [~evt]
+                            ((fn [~source ~evt] ~@body)
+                             (. ~evt getSource)
+                             ~evt)))))))))

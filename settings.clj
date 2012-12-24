@@ -12,20 +12,20 @@
 
 (def editor-keybind-settings
   {
-   '(Ctrl \h) editor/backward
-   '(Ctrl \j) editor/down
-   '(Ctrl \k) editor/up
-   '(Ctrl \l) editor/forward
+   '(Ctrl \h) editor/backward-char
+   '(Ctrl \j) editor/next-line
+   '(Ctrl \k) editor/previous-line
+   '(Ctrl \l) editor/forward-char
 
-   '(Alt \h) editor/previousWord
-   '(Alt \l) editor/nextWord
-   '(Alt Shift \h) editor/beginLine
-   '(Alt Shift \l) editor/endLine
+   '(Alt \h) editor/backward-word
+   '(Alt \l) editor/forward-word
+   '(Alt Shift \h) editor/begin-line
+   '(Alt Shift \l) editor/end-line
 
-   '(Alt \j) editor/pageDown
-   '(Alt \k) editor/pageUp
-   '(Alt Shift \j) editor/end
-   '(Alt Shift \k) editor/begin
+   '(Alt \j) editor/next-page
+   '(Alt \k) editor/previous-page
+   '(Alt Shift \j) editor/end-buffer
+   '(Alt Shift \k) editor/begin-buffer
 
    '(Ctrl \b) editor/deletePrevChar
    '(Ctrl \d) editor/deleteNextChar
@@ -40,6 +40,11 @@
 
    '(Ctrl \z) editor/undo
    '(Ctrl \y) editor/redo
+
+   '(Ctrl \m) editor/mark
+   '(Ctrl \e) editor/escape
+
+   ;'(Ctrl \t) editor/select-test
   })
 
 (doseq [setting editor-keybind-settings]
