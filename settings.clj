@@ -45,6 +45,7 @@
    '(Ctrl \e) editor/escape
 
    ;'(Ctrl \t) editor/select-test
+   '(Ctrl \g) editor/goto-line
   })
 
 (doseq [setting editor-keybind-settings]

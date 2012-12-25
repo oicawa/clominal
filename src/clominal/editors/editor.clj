@@ -13,7 +13,7 @@
            (javax.swing.undo UndoManager)
            (java.io File FileInputStream FileWriter FileNotFoundException))
   (:require [clominal.keys :as keys])
-  (:require [clominal.dialog :as dialog])
+  ;(:require [clominal.dialog :as dialog])
   (:use [clominal.utils]))
 
 ;;------------------------------
@@ -95,7 +95,8 @@
 
 (definterface ITextEditor
   (getModified [])
-  (getTextPane []))
+  (getTextPane [])
+  (getScroll []))
 
 ;
 ; Text Line Number
@@ -403,7 +404,8 @@
                        (getModified []
                          (. text-pane getModified))
                        (requestFocusInWindow []
-                         (. text-pane requestFocusInWindow)))
+                         (. text-pane requestFocusInWindow))
+                       (getScroll [] scroll))
                 ;
         ; Line Numbers
         ;
@@ -501,6 +503,11 @@
       (. (get-default-editor-action selection) actionPerformed evt)
       (. (get-default-editor-action normal) actionPerformed evt)))
 
+(defn get-current-element-index [text-pane]
+  (let [current-pos (. text-pane getCaretPosition)
+        root        (.. text-pane getDocument getDefaultRootElement)]
+    (. root getElementIndex current-pos)))
+
 (defmacro defaction-with-default
   [name bindings & body]
   (assert (vector? bindings))
@@ -572,6 +579,20 @@
 (defaction begin-buffer [text-pane evt] (caret-action text-pane evt DefaultEditorKit/beginAction DefaultEditorKit/selectionBeginAction))
 (defaction end-buffer [text-pane evt] (caret-action text-pane evt DefaultEditorKit/endAction DefaultEditorKit/selectionEndAction))
 
+;; Selected line
+(defaction goto-line [text-pane]
+  (let [input-line (JOptionPane/showInputDialog nil "Input line number.")]
+    (if (not (= nil input-line))
+        (let [root        (.. text-pane getDocument getDefaultRootElement)
+              cnt         (. root getElementCount)
+              input-value (Integer/parseInt (. input-line trim))
+              line        (min (- input-value 1) cnt)
+              element     (. root getElement line)
+              rect        (. text-pane modelToView (. element getStartOffset))
+              view-rect   (.. text-pane getRoot getScroll getViewport getViewRect)]
+          (. rect setSize 10 (. view-rect height))
+          (. text-pane scrollRectToVisible rect)
+          (. text-pane setCaretPosition (. element getStartOffset))))))
 
 ;;
 ;; Delete action group.
@@ -628,7 +649,6 @@
 (def beep (get-default-editor-action DefaultEditorKit/beepAction))
 (def readOnly (get-default-editor-action DefaultEditorKit/readOnlyAction))
 (def writable (get-default-editor-action DefaultEditorKit/writableAction))
-
 
 ;;
 ;; Edit action group.
