@@ -586,7 +586,7 @@
         (let [root        (.. text-pane getDocument getDefaultRootElement)
               cnt         (. root getElementCount)
               input-value (Integer/parseInt (. input-line trim))
-              line        (min (- input-value 1) cnt)
+              line        (- (min input-value cnt) 1)
               element     (. root getElement line)
               rect        (. text-pane modelToView (. element getStartOffset))
               view-rect   (.. text-pane getRoot getScroll getViewport getViewRect)]
@@ -713,8 +713,8 @@
 
 (defaction file-open
   [tabs]
-  (let [chooser   (JFileChooser. (str "~" os-file-separator))
-        result    (. chooser showOpenDialog nil)]
+  (let [chooser (JFileChooser.)
+        result  (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)
         (file-set tabs (.. chooser getSelectedFile)))))
 
