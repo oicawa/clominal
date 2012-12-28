@@ -1,6 +1,8 @@
 (ns clominal.frame
   (:use [clojure.contrib.def])
-  (:import (javax.swing JComponent JFrame JTabbedPane JEditorPane KeyStroke JButton ImageIcon JPanel AbstractAction WindowConstants JOptionPane)
+  (:import (javax.swing JComponent JFrame JTabbedPane JEditorPane JButton ImageIcon JPanel
+                        WindowConstants AbstractAction KeyStroke JOptionPane)
+           (java.awt Toolkit)
            (java.awt.event InputEvent KeyEvent WindowAdapter))
   (:require [clominal.editors.editor :as editor]
             [clominal.keys :as keys])
@@ -40,7 +42,12 @@
         frame        (JFrame.)
         close-option (if (= mode "d")
                          JFrame/DISPOSE_ON_CLOSE
-                         JFrame/EXIT_ON_CLOSE)]
+                         JFrame/EXIT_ON_CLOSE)
+        screen-size  (. (Toolkit/getDefaultToolkit) getScreenSize)
+        frame-height (* (. screen-size height) 0.9)
+        frame-width  (if (< (. screen-size width) 800)
+                         (. screen-size width)
+                         800)]
     ;;
     ;; InputMap & ActionMap
     ;;
@@ -58,7 +65,7 @@
       (.setTitle "clominal")
       ;(.setDefaultCloseOperation close-option)
       (.setDefaultCloseOperation WindowConstants/DO_NOTHING_ON_CLOSE)
-      (.setSize 600 400)
+      (.setSize frame-width frame-height)
       (.setLocationRelativeTo nil)
       (.add tabs)
       (.setIconImage (. (ImageIcon. "./resources/clojure-icon.gif") getImage))
