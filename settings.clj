@@ -27,8 +27,8 @@
    '(Alt Shift \j) editor/end-buffer
    '(Alt Shift \k) editor/begin-buffer
 
-   '(Ctrl \b) editor/deletePrevChar
-   '(Ctrl \d) editor/deleteNextChar
+   '(Ctrl \b) editor/delete-previous-char
+   '(Ctrl \d) editor/delete-next-char
 
    '(Ctrl \c) editor/copy
    '(Ctrl \v) editor/paste
@@ -46,6 +46,7 @@
 
    ;'(Ctrl \t) editor/select-test
    '(Ctrl \g) editor/goto-line
+   '((Ctrl \i) \f) editor/print-font-names
   })
 
 (doseq [setting editor-keybind-settings]

@@ -37,8 +37,7 @@
 ;
 (defn get-font-names
   []
-  (doseq [font (.. GraphicsEnvironment getLocalGraphicsEnvironment getAvailableFontFamilyNames)]
-    (println font)))
+  (.. GraphicsEnvironment getLocalGraphicsEnvironment getAvailableFontFamilyNames))
 
 (defn set-font
   [component parameters]
@@ -415,7 +414,8 @@
         ; Others
         ;
         default-map       (. maps get "default")
-        default-fonts     {:linux   ["Takaoゴシック" Font/PLAIN 14]
+        default-fonts     {:linux   ;["Takaoゴシック" Font/PLAIN 14]
+                                    ["YOzFontCF" Font/PLAIN 20]
                            :windows ["ＭＳ ゴシック" Font/PLAIN 14]}
         ]
     ;
@@ -599,8 +599,13 @@
 ;;
 
 ;; Charactor
-(def deletePrevChar (get-default-editor-action DefaultEditorKit/deletePrevCharAction))
-(def deleteNextChar (get-default-editor-action DefaultEditorKit/deleteNextCharAction))
+(defaction delete-previous-char [text-pane evt]
+  (. (get-default-editor-action DefaultEditorKit/deletePrevCharAction) actionPerformed evt)
+  (. text-pane setMark false))
+
+(defaction delete-next-char [text-pane evt]
+  (. (get-default-editor-action DefaultEditorKit/deleteNextCharAction) actionPerformed evt)
+  (. text-pane setMark false))
 
 ;; Word
 (def deletePrevWord (get-default-editor-action DefaultEditorKit/deletePrevWordAction))
@@ -654,27 +659,21 @@
 ;; Edit action group.
 ;;
 
-(defaction undo
-  [text-pane]
-  (let [um (. text-pane getUndoManager)]
+(defaction undo [text-pane]
+  (let [um  (. text-pane getUndoManager)]
     (if (. um canUndo)
         (. um undo))))
 
-(defaction redo
-  [text-pane]
-  (let [um (. text-pane getUndoManager)]
+(defaction redo [text-pane]
+  (let [um  (. text-pane getUndoManager)]
     (if (. um canRedo)
         (. um redo))))
 
-(defaction mark
-  [text-pane]
-  (. text-pane setMark true)
-  (println "setMark :" (. text-pane isMark)))
+(defaction mark [text-pane]
+  (. text-pane setMark true))
 
-(defaction escape
-  [text-pane]
-  (. text-pane setMark false)
-  (println "setMark :" (. text-pane isMark)))
+(defaction escape [text-pane]
+  (. text-pane setMark false))
 
 ;;
 ;; File action group.
@@ -701,7 +700,8 @@
                 (.addDocumentListener (proxy [DocumentListener] []
                                         (changedUpdate [evt] )
                                         (insertUpdate [evt] (. text-pane setModified true))
-                                        (removeUpdate [evt] (. text-pane setModified true))))))
+                                        (removeUpdate [evt] (. text-pane setModified true))))
+                (.addUndoableEditListener (. text-pane getUndoManager))))
             (catch FileNotFoundException _ true)
             (catch Exception e
               (. e printStackTrace)
@@ -744,3 +744,6 @@
     (. tabs (remove index))))
 
 
+(defaction print-font-names [text-pane]
+  (doseq [font (get-font-names)]
+    (println font)))
