@@ -1,19 +1,49 @@
 (ns clominal.frame
   (:use [clojure.contrib.def])
-  (:import (javax.swing JComponent JFrame JTabbedPane JEditorPane JButton ImageIcon JPanel
+  (:import (javax.swing JComponent JFrame JTabbedPane JEditorPane JButton ImageIcon JPanel JTextField JList
                         WindowConstants AbstractAction KeyStroke JOptionPane)
-           (java.awt Toolkit)
+           (java.awt Toolkit GridBagLayout)
            (java.awt.event InputEvent KeyEvent WindowAdapter))
   (:require [clominal.editors.editor :as editor]
             [clominal.keys :as keys])
-  (:use [clominal.utils]))
+  (:use [clominal.utils])
+  (:use [clominal.dialog]))
+
+(definterface ITabbedPane
+  (getCurrentPanel []))
 
 ;;
 ;; Actions
-;;
+;; 
 (defaction select-tab [tabs]
   (let [index (. tabs getSelectedIndex)]
     (. tabs (remove index))))
+
+
+(defaction show-tools [tabs]
+  (let [panel     (JPanel.)
+        textbox   (JTextField.)
+        tool-list (JList.)
+        dialog    (make-dialog "Tools" panel)]
+    (doto panel
+      ;(.setPreferredSize nil)
+      (.setLayout (GridBagLayout.))
+      (grid-bag-layout
+        :gridx 0, :gridy 0
+        :anchor :WEST
+        :weightx 1.0 :weighty 0.0
+        :fill :HORIZONTAL
+        textbox
+        :gridx 0, :gridy 1
+        :weightx 1.0 :weighty 1.0
+        :fill :BOTH
+        tool-list
+        ))
+
+    (. dialog setVisible true)
+    (let [input-value (. textbox getText)]
+      (if (not (= nil input-value))
+          (JOptionPane/showMessageDialog tabs input-value)))))
 
 
 (defn get-modified-tabs
@@ -32,7 +62,12 @@
   "Create clominal main frame."
   [mode]
   (let [ime-mode     (atom nil)
-        tabs         (proxy [JTabbedPane clominal.keys.IKeybindComponent] []
+        tabs         (proxy [JTabbedPane ITabbedPane clominal.keys.IKeybindComponent] []
+                       (getCurrentPanel []
+                         (let [index (. this getSelectedIndex)]
+                           (if (< index 0)
+                               nil
+                               (. this getComponentAt index))))
                        (setImeEnable [value])
                        (setInputMap [inputmap]
                          (. this setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW inputmap))

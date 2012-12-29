@@ -8,9 +8,13 @@
            (java.io File FileInputStream FileWriter FileNotFoundException))
   (:require [clominal.utils :as utils]))
 
+(definterface IDialog
+  (getPanel []))
+
 (defn make-dialog
   [title panel]
-  (doto (JDialog.)
+  (doto (proxy [JDialog IDialog] []
+          (getPanel [] panel))
     (.setTitle title)
     (.setModal true)
     (.setDefaultCloseOperation WindowConstants/DISPOSE_ON_CLOSE)

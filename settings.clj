@@ -44,7 +44,6 @@
    '(Ctrl \m) editor/mark
    '(Ctrl \e) editor/escape
 
-   ;'(Ctrl \t) editor/select-test
    '(Ctrl \g) editor/goto-line
    '((Ctrl \i) \f) editor/print-font-names
   })
@@ -57,6 +56,7 @@
 
 (def frame-keybind-settings
   {
+   '(Ctrl \t) frame/show-tools
    '(Ctrl \n) editor/file-new
    '(Ctrl \o) editor/file-open
    ;'(Ctrl \q) frame/quit

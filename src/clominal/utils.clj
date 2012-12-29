@@ -87,6 +87,8 @@
 
 (def os-file-separator (System/getProperty "file.separator"))
 
+(def home-directory-path (System/getProperty "user.home"))
+
 (defn get-absolute-path
   [path]
   (let [fields (seq (. path split (Pattern/quote os-file-separator)))

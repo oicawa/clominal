@@ -95,7 +95,8 @@
 (definterface ITextEditor
   (getModified [])
   (getTextPane [])
-  (getScroll []))
+  (getScroll [])
+  (getPath []))
 
 ;
 ; Text Line Number
@@ -404,7 +405,8 @@
                          (. text-pane getModified))
                        (requestFocusInWindow []
                          (. text-pane requestFocusInWindow))
-                       (getScroll [] scroll))
+                       (getScroll [] scroll)
+                       (getPath [] @file-path))
                 ;
         ; Line Numbers
         ;
@@ -713,7 +715,9 @@
 
 (defaction file-open
   [tabs]
-  (let [chooser (JFileChooser.)
+  (let [panel   (. tabs getCurrentPanel)
+        path    (if (= nil panel) home-directory-path (. panel getPath))
+        chooser (JFileChooser. path)
         result  (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)
         (file-set tabs (.. chooser getSelectedFile)))))
