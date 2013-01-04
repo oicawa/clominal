@@ -4,17 +4,20 @@
            (java.awt.im InputMethodRequests)
            (java.beans PropertyChangeListener)
            (java.util HashMap)
-           (javax.swing JList InputMap ActionMap JComponent JTextPane JScrollPane Action
+           (javax.swing JList InputMap ActionMap JComponent JTextPane JEditorPane JTextArea JScrollPane Action
                         JLabel JTextField JPanel JOptionPane SwingConstants JFileChooser
                         SwingUtilities AbstractAction)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
            (javax.swing.event CaretListener DocumentListener)
-           (javax.swing.text StyleConstants Utilities DefaultEditorKit)
+           (javax.swing.text StyleConstants Utilities DefaultEditorKit DefaultHighlighter$DefaultHighlightPainter)
            (javax.swing.undo UndoManager)
-           (java.io File FileInputStream FileWriter FileNotFoundException))
+           (java.io File FileInputStream FileWriter FileNotFoundException StringReader)
+           (clojure.lang LineNumberingPushbackReader LispReader))
   (:require [clominal.keys :as keys])
+  (:require [clojure.contrib.string :as string])
   ;(:require [clominal.dialog :as dialog])
   (:use [clominal.utils]))
+
 
 ;;------------------------------
 ;;
@@ -30,7 +33,7 @@
 ;
 ; Key Maps
 ;
-(def maps (keys/make-keymaps (JTextPane.) JComponent/WHEN_FOCUSED))
+(def maps (keys/make-keymaps (JEditorPane.) JComponent/WHEN_FOCUSED))
 
 ;
 ; Font utilities
@@ -319,7 +322,7 @@
         ime-mode     (atom nil)
         um           (UndoManager.)
         is-marked    (atom false)
-        text-pane    (proxy [JTextPane ITextPane clominal.keys.IKeybindComponent] []
+        text-pane    (proxy [JEditorPane ITextPane clominal.keys.IKeybindComponent] []
                        (getPath []
                          @file-path)
                        (setPath [path]
@@ -417,7 +420,7 @@
         ;
         default-map       (. maps get "default")
         default-fonts     {:linux   ;["Takaoゴシック" Font/PLAIN 14]
-                                    ["YOzFontCF" Font/PLAIN 20]
+                                    ["YOzFontCF" Font/PLAIN 16]
                            :windows ["ＭＳ ゴシック" Font/PLAIN 14]}
         ]
     ;
@@ -695,9 +698,14 @@
           (. text-pane setPath file-path)
           (try
             (with-open [stream (FileInputStream. file-path)]
-              (doto text-pane
-                (.read stream (. text-pane getDocument))
-                (.setModified false))
+              (let [document (. text-pane getDocument)]
+                (println (type text-pane))
+                (. text-pane read stream document)
+                (. text-pane setModified false)
+              ; (doto text-pane
+              ;   (.read stream (. text-pane getDocument))
+              ;   (.setModified false))
+                )
               (doto (. text-pane getDocument)
                 (.addDocumentListener (proxy [DocumentListener] []
                                         (changedUpdate [evt] )
@@ -751,3 +759,119 @@
 (defaction print-font-names [text-pane]
   (doseq [font (get-font-names)]
     (println font)))
+
+(defaction colored-tokens [text-pane]
+  (let [EOF             (Object.)
+        reader          (StringReader. (. text-pane getText))
+        pushback-reader (LineNumberingPushbackReader. reader)]
+    (loop [r (LispReader/read pushback-reader false nil true)]
+      (if (= EOF r)
+          nil
+          (let [row (. pushback-reader getLineNumber)
+                ;col (. pushback-reader getColumnNumber)
+                ]
+            ;(println "row:" row ", col:" col ", r:" r)
+            (println "row:%d, emit:%s, row:%s" row (. r canEmit))
+            (recur (LispReader/read pushback-reader false nil true)))))))
+
+(def parentheses-infos {"(" {:src "(" :dst ")" :dir 1}
+                        "[" {:src "[" :dst "]" :dir 1}
+                        "{" {:src "{" :dst "}" :dir 1}
+                        ;")" {:src ")" :dst "(" :dir -1}
+                        ; "]" {:src "]" :dst "[" :dir -1}
+                        ; "}" {:src "}" :dst "{" :dir -1}
+                        })
+
+(def right-parentheses-infos {")" {:src ")" :dst "(" :dir -1}
+                              "]" {:src "]" :dst "[" :dir -1}
+                              "}" {:src "}" :dst "{" :dir -1}
+                              })
+
+(defn get-comment-end
+  [text-pane base-pos]
+  (loop [pos base-pos]
+    (let [c (. text-pane getText pos 1)]
+      (cond (or (= c "\r") (= c "\n")) pos
+            :else                      (recur (+ pos 1))))))
+  
+(defn get-string-end
+  [text-pane base-pos]
+  (loop [pos (+ base-pos 1)]
+    (let [c (. text-pane getText pos 1)]
+      (cond (= c "\\") (recur (+ pos 2))
+            (= c "\"") pos
+            :else      (recur (+ pos 1))))))
+  
+(defn get-char-end
+  [text-pane base-pos]
+  (loop [pos base-pos]
+    (let [c (. text-pane getText pos 1)]
+      (cond (string/blank? c)                     pos
+            (contains? right-parentheses-infos c) pos
+            :else                                 (recur (+ pos 1))))))
+  
+(defn get-parentheses-current
+  [text-pane base-pos]
+  (let [info (parentheses-infos (. text-pane getText base-pos 1))]
+    (if (nil? info)
+        nil
+        (assoc info :src-pos base-pos))))
+
+(defn get-parentheses-pair
+  [text-pane src-info max-length]
+  (let [dst     (src-info :dst)
+        src-pos (src-info :src-pos)
+        dir     (src-info :dir)]
+    (loop [pos (+ src-pos dir)]
+      (if (< max-length pos)
+          nil
+          (let [c (. text-pane getText pos 1)]
+            (cond (= c dst)                       pos
+                  (= c ";")                       (recur (get-comment-end text-pane pos))
+                  (= c "\"")                      (recur (+ (get-string-end text-pane pos) 1))
+                  (= c "\\")                      (recur (get-char-end text-pane pos))
+                  (contains? parentheses-infos c) (let [next-src-info (get-parentheses-current text-pane pos)
+                                                        next-src-pos  (+ (get-parentheses-pair text-pane next-src-info max-length) 1)]
+                                                    (recur next-src-pos))
+                  :else                           (recur (+ pos 1))))))))
+
+(defn remove-highlites
+  [text-pane]
+  (let [hiliter (. text-pane getHighlighter)
+        hilites (. hiliter getHighlights)]
+    (doseq [hilite hilites]
+      (if (instance? DefaultHighlighter$DefaultHighlightPainter (. hilite getPainter))
+          (. hiliter removeHighlight hilite)))))
+
+(defn add-highlight
+  [text-pane start end color]
+  (let [highlighter (. text-pane getHighlighter)
+        painter     (DefaultHighlighter$DefaultHighlightPainter. color)]
+    (. highlighter addHighlight start end painter)))
+    
+(defaction colored-parentheses [text-pane]
+  (remove-highlites text-pane)
+  (let [max-length (.. text-pane getDocument getLength)
+        src-info (get-parentheses-current text-pane (. text-pane getCaretPosition))
+        dst-info (if (nil? src-info) nil (get-parentheses-pair text-pane src-info max-length))
+        color    (cond (nil? src-info) nil
+                       (nil? dst-info) Color/PINK
+                       :else           Color/CYAN)
+        ]
+    (println "src-info:" src-info)
+    (println "dst-info:" dst-info)
+    (println "color:" color)
+    (if (not (nil? src-info))
+        (let [start (src-info :src-pos)
+              end   (+ start 1)]
+          (add-highlight text-pane start end color)))
+
+    (if (not (nil? dst-info))
+        (let [start dst-info
+              end   (+ start 1)]
+          (add-highlight text-pane start end color)))
+        ))
+          
+
+
+

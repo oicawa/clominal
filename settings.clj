@@ -46,6 +46,8 @@
 
    '(Ctrl \g) editor/goto-line
    '((Ctrl \i) \f) editor/print-font-names
+   ;'(Ctrl \p) editor/colored-tokens
+   '(Ctrl \p) editor/colored-parentheses
   })
 
 (doseq [setting editor-keybind-settings]
