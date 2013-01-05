@@ -709,13 +709,13 @@
               (let [document (. text-pane getDocument)]
                 (doto text-pane
                   (.read stream document)
-                  (.setModified false)))
-              (doto (. text-pane getDocument)
-                (.addDocumentListener (proxy [DocumentListener] []
-                                        (changedUpdate [evt] )
-                                        (insertUpdate [evt] (. text-pane setModified true))
-                                        (removeUpdate [evt] (. text-pane setModified true))))
-                (.addUndoableEditListener (. text-pane getUndoManager))))
+                  (.setModified false))
+                (doto document
+                  (.addDocumentListener (proxy [DocumentListener] []
+                                          (changedUpdate [evt] )
+                                          (insertUpdate [evt] (. text-pane setModified true))
+                                          (removeUpdate [evt] (. text-pane setModified true))))
+                  (.addUndoableEditListener (. text-pane getUndoManager)))))
             (catch FileNotFoundException _ true)
             (catch Exception e
               (. e printStackTrace)
