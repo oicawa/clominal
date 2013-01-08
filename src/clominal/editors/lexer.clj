@@ -219,24 +219,16 @@
 (defn add-atribute [doc start end color]
   (let [attr (SimpleAttributeSet.)]
     (StyleConstants/setForeground attr color)
-    ;(. doc setCharacterAttributes start end attr false)
-    (. doc setCharacterAttributes start end attr true)
-    (println (format "[%d:%d] %s / %s" start end attr color))
-    ))
+    ;(. doc setCharacterAttributes start (- end start) attr false)
+    (. doc setCharacterAttributes start (+ (- end start) 1) attr true)))
 
 
 (defn parse
   [text-pane pos max-length]
-  (letfn [(token-log
-            [label start end]
-            (let [len   (+ (- end start) 1)
-                  token (. text-pane getText start len)]
-              (println (format "%s [%d:%d] %s" label start end token))))
-          (get-end
+  (letfn [(get-end
             [text-pane start value]
             (let [len (count value)
                   pos (+ start len -1)]
-              ;(println "get-end check: pos =" pos)
               (cond (< max-length pos)
                       nil
                     (= value (. text-pane getText start len))
@@ -252,9 +244,6 @@
                               (get-end text-pane pos "space")
                               (get-end text-pane pos "tab")
                               (if (< max-length pos) max-length pos))]
-                  ; add attributes
-                  ;(println "parse-char check: pos =" pos)
-                  (token-log "CHAR   " start end)
                   (add-atribute (. text-pane getDocument) start end Color/ORANGE)
                   end)))
           (parse-comment
@@ -270,8 +259,7 @@
                         (if (nil? end)
                             (recur (+ pos 1))
                             (do
-                              (token-log "COMMENT" start (- pos 1))
-                              (add-atribute (. text-pane getDocument) start (- pos 1) Color/GREEN)
+                              (add-atribute (. text-pane getDocument) start end Color/GREEN)
                               end)))))))
           (parse-string
             [text-pane start c]
@@ -287,7 +275,6 @@
                                           pos
                                         :else
                                           (recur (+ pos 1))))))]
-                  (token-log "STRING " start end)
                   (add-atribute (. text-pane getDocument) start end Color/RED)
                   end)))
           (parse-list

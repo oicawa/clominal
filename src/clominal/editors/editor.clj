@@ -716,8 +716,7 @@
                                           (insertUpdate [evt] (. text-pane setModified true))
                                           (removeUpdate [evt] (. text-pane setModified true))))
                   (.addUndoableEditListener (. text-pane getUndoManager))))
-              ;(lexer/parse text-pane 0 (.. text-pane getDocument getLength))
-              )
+              (lexer/parse text-pane 0 (.. text-pane getDocument getLength)))
             (catch FileNotFoundException _ true)
             (catch Exception e
               (. e printStackTrace)
@@ -786,26 +785,33 @@
 
 
 (defaction show-attribute [text-pane]
-  (let [attr (SimpleAttributeSet.)
-        doc  (. text-pane getDocument)]
-    (StyleConstants/setBold attr true)
-    (. doc setCharacterAttributes 4 8 attr false))
-    (let [pos   (. text-pane getCaretPosition)
-          ;root  (.. text-pane getDocument getDefaultRootElement)
-          ;index (. root getElementIndex pos)
-          ;child (. root getElement index)
-          ;start (. child getStartOffset)
-          ;name  (. child getName)
-          attr  (. text-pane getCharacterAttributes)
-          ]
+  (let [pos   (. text-pane getCaretPosition)
+        ;root  (.. text-pane getDocument getDefaultRootElement)
+        ;index (. root getElementIndex pos)
+        ;child (. root getElement index)
+        ;start (. child getStartOffset)
+        ;name  (. child getName)
+        attr  (. text-pane getCharacterAttributes)
+        ]
 
-      (println "----------")
-      (println "pos:" pos)
-      ; (println "root:" root)
-      ; (println "child:" child)
-      ; (println "index:" index)
-      ; (println "start:" start)
-      ; (println "name:" name)
-      (println "attr:" attr)
-      ; (println "string:" (. child toString))
-      ))
+    (println "----------")
+    (println "pos:" pos)
+    ; (println "root:" root)
+    ; (println "child:" child)
+    ; (println "index:" index)
+    ; (println "start:" start)
+    ; (println "name:" name)
+    (println "attr:" attr)
+    ; (println "string:" (. child toString))
+    ))
+
+(defaction set-attribute [text-pane]
+  (let [start (. text-pane getSelectionStart)
+        end   (. text-pane getSelectionEnd)]
+    (println (format "-----\nstart:%d, end:%d" start end))
+    (if (= start end)
+        nil
+        (let [attr (SimpleAttributeSet.)
+              doc  (. text-pane getDocument)]
+          (StyleConstants/setForeground attr Color/RED)
+          (. doc setCharacterAttributes start (- end start) attr true)))))

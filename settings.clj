@@ -43,6 +43,7 @@
    '(Ctrl \g) editor/goto-line
 
    ;'((Ctrl \i) \f) editor/print-font-names
+   '(Ctrl \u) editor/set-attribute
    '(Ctrl \i) editor/show-attribute
   })
 
