@@ -35,18 +35,15 @@
    '(Ctrl \x) editor/cut
    '(Ctrl \s) editor/file-save
    '((Alt \f) \c) editor/close
-
    '(Ctrl \a) editor/selectAll
-
    '(Ctrl \z) editor/undo
    '(Ctrl \y) editor/redo
-
    '(Ctrl \m) editor/mark
    '(Ctrl \e) editor/escape
-
    '(Ctrl \g) editor/goto-line
-   '((Ctrl \i) \f) editor/print-font-names
-   '(Ctrl \u) editor/show-attribute
+
+   ;'((Ctrl \i) \f) editor/print-font-names
+   '(Ctrl \i) editor/show-attribute
   })
 
 (doseq [setting editor-keybind-settings]

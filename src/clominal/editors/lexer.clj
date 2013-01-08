@@ -10,7 +10,7 @@
                         SwingUtilities AbstractAction)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
            (javax.swing.event CaretListener DocumentListener)
-           (javax.swing.text StyleConstants Utilities DefaultEditorKit DefaultHighlighter$DefaultHighlightPainter)
+           (javax.swing.text StyleConstants Utilities DefaultEditorKit DefaultHighlighter$DefaultHighlightPainter SimpleAttributeSet)
            (javax.swing.undo UndoManager)
            (java.io File FileInputStream FileWriter FileNotFoundException))
   (:require [clominal.keys :as keys])
@@ -91,19 +91,24 @@
 ;     COLUMN_BEFORE.set(pushbackReader.getColumnNumber());
 ; }
 
-(defn remove-highlites
-  [text-pane]
-  (let [hiliter (. text-pane getHighlighter)
-        hilites (. hiliter getHighlights)]
-    (doseq [hilite hilites]
-      (if (instance? DefaultHighlighter$DefaultHighlightPainter (. hilite getPainter))
-          (. hiliter removeHighlight hilite)))))
+;; START FROM HERE...
+
+(def parentheses-NG-highlite (DefaultHighlighter$DefaultHighlightPainter. Color/PINK))
+(def parentheses-OK-highlite (DefaultHighlighter$DefaultHighlightPainter. Color/CYAN))
+
+
+(defn remove-highlight
+  [text-pane highlight-painter]
+  (let [highlighter (. text-pane getHighlighter)
+        highlights  (. highlighter getHighlights)]
+    (doseq [h highlights]
+      (if (= (. h getPainter) highlight-painter)
+          (. highlighter removeHighlight h)))))
 
 (defn add-highlight
-  [text-pane start end color]
-  (let [highlighter (. text-pane getHighlighter)
-        painter     (DefaultHighlighter$DefaultHighlightPainter. color)]
-    (. highlighter addHighlight start end painter)))
+  [text-pane start end highlight]
+  (let [highlighter (. text-pane getHighlighter)]
+    (. highlighter addHighlight start end highlight)))
     
 
 (def parentheses-infos {"(" {:src "(" :dst ")" :dir 1}
@@ -113,6 +118,11 @@
                         ; "]" {:src "]" :dst "[" :dir -1}
                         ; "}" {:src "}" :dst "{" :dir -1}
                         })
+
+(def left-parentheses-infos {"(" ")"
+                             "[" "]"
+                             "{" "}"
+                             })
 
 (def right-parentheses-infos {")" {:src ")" :dst "(" :dir -1}
                               "]" {:src "]" :dst "[" :dir -1}
@@ -185,21 +195,134 @@
 
 (defn set-color-parentheses
   [text-pane pos]
-  (remove-highlites text-pane)
+  (remove-highlight text-pane parentheses-NG-highlite)
+  (remove-highlight text-pane parentheses-OK-highlite)
   (let [max-length (.. text-pane getDocument getLength)
-        src-info (get-parentheses-current text-pane pos)
-        dst-info (if (nil? src-info) nil (get-parentheses-pair text-pane src-info max-length))
-        color    (cond (nil? src-info) nil
-                       (nil? dst-info) Color/PINK
-                       (< dst-info 0)  Color/PINK
-                       :else           Color/CYAN)]
+        src-info   (get-parentheses-current text-pane pos)
+        dst-info   (if (nil? src-info) nil (get-parentheses-pair text-pane src-info max-length))
+        highlight  (cond (nil? src-info) nil
+                         (nil? dst-info) parentheses-NG-highlite
+                         (< dst-info 0)  parentheses-NG-highlite
+                         :else           parentheses-OK-highlite)]
     (if (not (nil? src-info))
         (let [start (src-info :src-pos)
               end   (+ start 1)]
-          (add-highlight text-pane start end color)))
+          (add-highlight text-pane start end highlight)))
 
     (if (not (nil? dst-info))
         (let [dst-pos (Math/abs dst-info)
               start dst-pos
               end   (+ start 1)]
-          (add-highlight text-pane start end color)))))
+          (add-highlight text-pane start end highlight)))))
+
+
+(defn add-atribute [doc start end color]
+  (let [attr (SimpleAttributeSet.)]
+    (StyleConstants/setForeground attr color)
+    ;(. doc setCharacterAttributes start end attr false)
+    (. doc setCharacterAttributes start end attr true)
+    (println (format "[%d:%d] %s / %s" start end attr color))
+    ))
+
+
+(defn parse
+  [text-pane pos max-length]
+  (letfn [(token-log
+            [label start end]
+            (let [len   (+ (- end start) 1)
+                  token (. text-pane getText start len)]
+              (println (format "%s [%d:%d] %s" label start end token))))
+          (get-end
+            [text-pane start value]
+            (let [len (count value)
+                  pos (+ start len -1)]
+              ;(println "get-end check: pos =" pos)
+              (cond (< max-length pos)
+                      nil
+                    (= value (. text-pane getText start len))
+                      pos
+                    :else
+                      nil)))
+          (parse-char
+            [text-pane start c]
+            (if (not (= c "\\"))
+                nil
+                (let [pos (+ start 1)
+                      end (or (get-end text-pane pos "newline")
+                              (get-end text-pane pos "space")
+                              (get-end text-pane pos "tab")
+                              (if (< max-length pos) max-length pos))]
+                  ; add attributes
+                  ;(println "parse-char check: pos =" pos)
+                  (token-log "CHAR   " start end)
+                  (add-atribute (. text-pane getDocument) start end Color/ORANGE)
+                  end)))
+          (parse-comment
+            [text-pane start c]
+            (if (not (= c ";"))
+                nil
+                (loop [pos (+ start 1)]
+                  (if (< max-length pos)
+                      max-length
+                      (let [end (or (get-end text-pane pos "\r\n")
+                                    (get-end text-pane pos "\r")
+                                    (get-end text-pane pos "\n"))]
+                        (if (nil? end)
+                            (recur (+ pos 1))
+                            (do
+                              (token-log "COMMENT" start (- pos 1))
+                              (add-atribute (. text-pane getDocument) start (- pos 1) Color/GREEN)
+                              end)))))))
+          (parse-string
+            [text-pane start c]
+            (if (not (= c "\""))
+                nil
+                (let [end (loop [pos (+ start 1)]
+                            (if (< max-length pos)
+                                max-length
+                                (let [c (. text-pane getText pos 1)]
+                                  (cond (= c "\\")
+                                          (recur (+ pos 2))
+                                        (= c "\"")
+                                          pos
+                                        :else
+                                          (recur (+ pos 1))))))]
+                  (token-log "STRING " start end)
+                  (add-atribute (. text-pane getDocument) start end Color/RED)
+                  end)))
+          (parse-list
+            [text-pane start c]
+            (let [pair (left-parentheses-infos c)]
+              (if (nil? pair)
+                  nil
+                  (let [end (loop [pos (+ start 1)]
+                              (if (< max-length pos)
+                                  max-length
+                                  (if (= pair (. text-pane getText pos 1))
+                                      pos
+                                      (recur (+ (parse text-pane pos max-length) 1)))))]
+                    ;(token-log "OTHER  " start end)
+                    ;(add-atribute (. text-pane getDocument) start end Color/BLACK)
+                    end))))
+          ; (parse-atom
+          ;   [text-pane start c]
+          ;   (let [end (loop [pos (+ start 1)]
+          ;               (if (< max-length pos)
+          ;                   max-length
+          ;                   (if  (. text-pane getText pos 1))
+          ;                       pos
+          ;                       (recur (+ (parse text-pane pos max-length) 1)))))]
+          ;           ;(token-log "OTHER  " start end)
+          ;           ;(add-atribute (. text-pane getDocument) start end Color/BLACK)
+          ;           end))))
+          ]
+    (if (< max-length pos)
+        max-length
+        (let [c        (. text-pane getText pos 1)
+              end      (or (parse-char text-pane pos c)
+                           (parse-string text-pane pos c)
+                           (parse-comment text-pane pos c)
+                           (parse-list text-pane pos c)
+                           ;(parse-atom text-pane pos c)
+                           pos)]
+          (recur text-pane (+ end 1) max-length)))))
