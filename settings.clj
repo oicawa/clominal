@@ -43,8 +43,11 @@
    '(Ctrl \g) editor/goto-line
 
    ;'((Ctrl \i) \f) editor/print-font-names
-   '(Ctrl \u) editor/set-attribute
+   '(Ctrl \u) editor/set-character-attribute
+   '(Ctrl \p) editor/set-paragraph-attribute
+   '(Alt \p) editor/show-paragraph-attribute
    '(Ctrl \i) editor/show-attribute
+   '((Ctrl \t) \c) editor/show-color-dialog
   })
 
 (doseq [setting editor-keybind-settings]

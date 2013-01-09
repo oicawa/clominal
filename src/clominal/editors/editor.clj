@@ -6,11 +6,11 @@
            (java.util HashMap)
            (javax.swing JList InputMap ActionMap JComponent JTextPane JEditorPane JTextArea JScrollPane Action
                         JLabel JTextField JPanel JOptionPane SwingConstants JFileChooser
-                        SwingUtilities AbstractAction)
+                        SwingUtilities AbstractAction JColorChooser)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
            (javax.swing.event CaretListener DocumentListener)
            (javax.swing.text StyleConstants Utilities DefaultEditorKit DefaultHighlighter$DefaultHighlightPainter SimpleAttributeSet
-                             DefaultStyledDocument)
+                             DefaultStyledDocument StyleContext)
            (javax.swing.undo UndoManager)
            (java.io File FileInputStream FileWriter FileNotFoundException StringReader)
            (clojure.lang LineNumberingPushbackReader LispReader))
@@ -323,7 +323,6 @@
         ime-mode     (atom nil)
         um           (UndoManager.)
         is-marked    (atom false)
-        ;text-pane    (proxy [JEditorPane ITextPane clominal.keys.IKeybindComponent] []
         text-pane    (proxy [JTextPane ITextPane clominal.keys.IKeybindComponent] []
                        (getPath []
                          @file-path)
@@ -442,6 +441,10 @@
                               (changedUpdate [evt] )
                               (insertUpdate [evt] (. text-pane setModified true))
                               (removeUpdate [evt] (. text-pane setModified true))))
+      ; (.addDocumentListener (proxy [DocumentListener] []
+      ;                         (changedUpdate [evt] )
+      ;                         (insertUpdate [evt] (. text-pane setModified true))
+      ;                         (removeUpdate [evt] (. text-pane setModified true))))
       (.addUndoableEditListener um))
 
 
@@ -709,13 +712,13 @@
               (let [document (. text-pane getDocument)]
                 (doto text-pane
                   (.read stream document)
-                  (.setModified false))
-                (doto document
-                  (.addDocumentListener (proxy [DocumentListener] []
-                                          (changedUpdate [evt] )
-                                          (insertUpdate [evt] (. text-pane setModified true))
-                                          (removeUpdate [evt] (. text-pane setModified true))))
-                  (.addUndoableEditListener (. text-pane getUndoManager))))
+                  (.setModified false)))
+              (doto (. text-pane getDocument)
+                (.addDocumentListener (proxy [DocumentListener] []
+                                        (changedUpdate [evt] )
+                                        (insertUpdate [evt] (. text-pane setModified true))
+                                        (removeUpdate [evt] (. text-pane setModified true))))
+                (.addUndoableEditListener (. text-pane getUndoManager)))
               (lexer/parse text-pane 0 (.. text-pane getDocument getLength)))
             (catch FileNotFoundException _ true)
             (catch Exception e
@@ -786,26 +789,19 @@
 
 (defaction show-attribute [text-pane]
   (let [pos   (. text-pane getCaretPosition)
-        ;root  (.. text-pane getDocument getDefaultRootElement)
-        ;index (. root getElementIndex pos)
-        ;child (. root getElement index)
-        ;start (. child getStartOffset)
-        ;name  (. child getName)
-        attr  (. text-pane getCharacterAttributes)
-        ]
-
+        attr  (. text-pane getCharacterAttributes)]
     (println "----------")
     (println "pos:" pos)
-    ; (println "root:" root)
-    ; (println "child:" child)
-    ; (println "index:" index)
-    ; (println "start:" start)
-    ; (println "name:" name)
-    (println "attr:" attr)
-    ; (println "string:" (. child toString))
-    ))
+    (println "attr:" attr)))
 
-(defaction set-attribute [text-pane]
+(defaction show-paragraph-attribute [text-pane]
+  (let [pos   (. text-pane getCaretPosition)
+        attr  (. text-pane getParagraphAttributes)]
+    (println "----------")
+    (println "pos:" pos)
+    (println "attr:" attr)))
+
+(defaction set-character-attribute [text-pane]
   (let [start (. text-pane getSelectionStart)
         end   (. text-pane getSelectionEnd)]
     (println (format "-----\nstart:%d, end:%d" start end))
@@ -814,4 +810,25 @@
         (let [attr (SimpleAttributeSet.)
               doc  (. text-pane getDocument)]
           (StyleConstants/setForeground attr Color/RED)
-          (. doc setCharacterAttributes start (- end start) attr true)))))
+          (. doc setCharacterAttributes start (- end start) attr false)))))
+
+(defaction set-paragraph-attribute [text-pane]
+  (let [start (. text-pane getSelectionStart)
+        end   (. text-pane getSelectionEnd)]
+    (println (format "-----\nstart:%d, end:%d" start end))
+    (if (= start end)
+        nil
+        (let [attr (SimpleAttributeSet.)
+              doc  (. text-pane getDocument)]
+          (StyleConstants/setForeground attr Color/BLUE)
+          (. doc setParagraphAttributes start (- end start) attr false)))))
+
+(defaction show-color-dialog [text-pane]
+  (let [color (JColorChooser/showDialog text-pane "Select Color" Color/WHITE)
+        pos   (. text-pane getCaretPosition)]
+    (if (nil? color)
+        nil
+        (let [doc   (. text-pane getDocument)
+              val   (format "(Color %d %d %d)" (. color getRed) (. color getGreen) (. color getBlue))
+              style (. (StyleContext/getDefaultStyleContext) getStyle StyleContext/DEFAULT_STYLE)]
+          (. doc insertString pos val style)))))

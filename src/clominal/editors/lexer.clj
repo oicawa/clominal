@@ -219,8 +219,9 @@
 (defn add-atribute [doc start end color]
   (let [attr (SimpleAttributeSet.)]
     (StyleConstants/setForeground attr color)
-    ;(. doc setCharacterAttributes start (- end start) attr false)
-    (. doc setCharacterAttributes start (+ (- end start) 1) attr true)))
+    (. doc setCharacterAttributes start (+ (- end start) 1) attr false)
+    ;(. doc setCharacterAttributes start (+ (- end start) 1) attr true)
+    ))
 
 
 (defn parse
@@ -244,7 +245,7 @@
                               (get-end text-pane pos "space")
                               (get-end text-pane pos "tab")
                               (if (< max-length pos) max-length pos))]
-                  (add-atribute (. text-pane getDocument) start end Color/ORANGE)
+                  (add-atribute (. text-pane getDocument) start end (Color. 204 102 0))
                   end)))
           (parse-comment
             [text-pane start c]
@@ -259,7 +260,7 @@
                         (if (nil? end)
                             (recur (+ pos 1))
                             (do
-                              (add-atribute (. text-pane getDocument) start end Color/GREEN)
+                              (add-atribute (. text-pane getDocument) start end (Color. 0 102 0))
                               end)))))))
           (parse-string
             [text-pane start c]
@@ -288,7 +289,6 @@
                                   (if (= pair (. text-pane getText pos 1))
                                       pos
                                       (recur (+ (parse text-pane pos max-length) 1)))))]
-                    ;(token-log "OTHER  " start end)
                     ;(add-atribute (. text-pane getDocument) start end Color/BLACK)
                     end))))
           ; (parse-atom
