@@ -1,5 +1,6 @@
 (ns clominal.editors.editor
-  (:import (java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
+  (:import (java.lang Thread)
+           (java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
            (java.awt.event ActionEvent)
            (java.awt.im InputMethodRequests)
            (java.beans PropertyChangeListener)
@@ -17,7 +18,6 @@
   (:require [clominal.keys :as keys])
   (:require [clominal.editors.lexer :as lexer])
   (:require [clojure.contrib.string :as string])
-  ;(:require [clominal.dialog :as dialog])
   (:use [clominal.utils]))
 
 
@@ -301,6 +301,11 @@
         (. rect setLocation (- (. rect x) 10) (- (. rect y) 45))
         rect))))
 
+(defn make-color-parentheses-thread
+  [text-pane position]
+  (Thread. (fn []
+             (lexer/set-color-parentheses text-pane position))))
+
 ;
 ; Text Editor
 ;
@@ -434,7 +439,12 @@
       (.enableInputMethods true)
       (.addCaretListener (proxy [CaretListener] []
                            (caretUpdate [evt]
-                             (lexer/set-color-parentheses (. evt getSource) (. evt getDot))))))
+                             (let [th1 (make-color-parentheses-thread (. evt getSource) (. evt getDot))]
+                               (. th1 start)))))
+      ; (.addCaretListener (proxy [CaretListener] []
+      ;                      (caretUpdate [evt]
+      ;                        (lexer/set-color-parentheses (. evt getSource) (. evt getDot)))))
+      )
 
     (doto (. text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []

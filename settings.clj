@@ -38,13 +38,13 @@
    '(Ctrl \a) editor/selectAll
    '(Ctrl \z) editor/undo
    '(Ctrl \y) editor/redo
-   '(Ctrl \m) editor/mark
+   '(Ctrl \p) editor/mark
    '(Ctrl \e) editor/escape
    '(Ctrl \g) editor/goto-line
 
    ;'((Ctrl \i) \f) editor/print-font-names
    '(Ctrl \u) editor/set-character-attribute
-   '(Ctrl \p) editor/set-paragraph-attribute
+   ;'(Ctrl \p) editor/set-paragraph-attribute
    '(Alt \p) editor/show-paragraph-attribute
    '(Ctrl \i) editor/show-attribute
    '((Ctrl \t) \c) editor/show-color-dialog

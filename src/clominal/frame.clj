@@ -87,18 +87,20 @@
     ;; InputMap & ActionMap
     ;;
     (def maps (keys/make-keymaps tabs JComponent/WHEN_IN_FOCUSED_WINDOW))
-    (require 'settings)
+
+    (try
+      (require 'settings)
+      (catch Exception e
+        (JOptionPane/showMessageDialog nil (str (. e getMessage) "\n\n" (. e printStackTrace))  "Error..." JOptionPane/OK_OPTION)
+        (throw e)))
+
     (let [tabs-map (. maps get "default")]
       (doto tabs
         (.setTabPlacement JTabbedPane/TOP)
-        (.setTabLayoutPolicy JTabbedPane/SCROLL_TAB_LAYOUT)
-        ; (.setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW (. tabs-map getInputMap))
-        ; (.setActionMap (. tabs-map getActionMap))
-        ))
+        (.setTabLayoutPolicy JTabbedPane/SCROLL_TAB_LAYOUT)))
 
     (doto frame
       (.setTitle "clominal")
-      ;(.setDefaultCloseOperation close-option)
       (.setDefaultCloseOperation WindowConstants/DO_NOTHING_ON_CLOSE)
       (.setSize frame-width frame-height)
       (.setLocationRelativeTo nil)
