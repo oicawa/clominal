@@ -114,9 +114,6 @@
 (def parentheses-infos {"(" {:src "(" :dst ")" :dir 1}
                         "[" {:src "[" :dst "]" :dir 1}
                         "{" {:src "{" :dst "}" :dir 1}
-                        ;")" {:src ")" :dst "(" :dir -1}
-                        ; "]" {:src "]" :dst "[" :dir -1}
-                        ; "}" {:src "}" :dst "{" :dir -1}
                         })
 
 (def left-parentheses-infos {"(" ")"
@@ -216,100 +213,159 @@
           (add-highlight text-pane start end highlight)))))
 
 
-(defn add-atribute [doc start end color]
-  (let [attr (SimpleAttributeSet.)]
+(defn add-attribute
+  [doc attr-name start end color]
+  (let [attr (SimpleAttributeSet.)
+        len  (+ (- end start) 1)]
     (StyleConstants/setForeground attr color)
-    (. doc setCharacterAttributes start (+ (- end start) 1) attr false)
-    ;(. doc setCharacterAttributes start (+ (- end start) 1) attr true)
-    ))
+    (. attr addAttribute "name" attr-name)
+    (. doc setCharacterAttributes start len attr false)))
 
+(defn get-end
+  [text-pane max-length start value]
+  (let [len (count value)
+        pos (+ start len -1)]
+    (cond (< max-length pos)
+            nil
+          (= value (. text-pane getText start len))
+            pos
+          :else
+            nil)))
 
-(defn parse
-  [text-pane pos max-length]
-  (letfn [(get-end
-            [text-pane start value]
-            (let [len (count value)
-                  pos (+ start len -1)]
-              (cond (< max-length pos)
-                      nil
-                    (= value (. text-pane getText start len))
-                      pos
-                    :else
-                      nil)))
-          (parse-char
-            [text-pane start c]
-            (if (not (= c "\\"))
-                nil
-                (let [pos (+ start 1)
-                      end (or (get-end text-pane pos "newline")
-                              (get-end text-pane pos "space")
-                              (get-end text-pane pos "tab")
-                              (if (< max-length pos) max-length pos))]
-                  (add-atribute (. text-pane getDocument) start end (Color. 204 102 0))
-                  end)))
-          (parse-comment
-            [text-pane start c]
-            (if (not (= c ";"))
-                nil
-                (loop [pos (+ start 1)]
-                  (if (< max-length pos)
-                      max-length
-                      (let [end (or (get-end text-pane pos "\r\n")
-                                    (get-end text-pane pos "\r")
-                                    (get-end text-pane pos "\n"))]
-                        (if (nil? end)
-                            (recur (+ pos 1))
-                            (do
-                              (add-atribute (. text-pane getDocument) start end (Color. 0 102 0))
-                              end)))))))
-          (parse-string
-            [text-pane start c]
-            (if (not (= c "\""))
-                nil
-                (let [end (loop [pos (+ start 1)]
-                            (if (< max-length pos)
-                                max-length
-                                (let [c (. text-pane getText pos 1)]
-                                  (cond (= c "\\")
-                                          (recur (+ pos 2))
-                                        (= c "\"")
-                                          pos
-                                        :else
-                                          (recur (+ pos 1))))))]
-                  (add-atribute (. text-pane getDocument) start end Color/RED)
-                  end)))
-          (parse-list
-            [text-pane start c]
-            (let [pair (left-parentheses-infos c)]
-              (if (nil? pair)
-                  nil
-                  (let [end (loop [pos (+ start 1)]
-                              (if (< max-length pos)
-                                  max-length
-                                  (if (= pair (. text-pane getText pos 1))
-                                      pos
-                                      (recur (+ (parse text-pane pos max-length) 1)))))]
-                    ;(add-atribute (. text-pane getDocument) start end Color/BLACK)
-                    end))))
-          ; (parse-atom
-          ;   [text-pane start c]
-          ;   (let [end (loop [pos (+ start 1)]
-          ;               (if (< max-length pos)
-          ;                   max-length
-          ;                   (if  (. text-pane getText pos 1))
-          ;                       pos
-          ;                       (recur (+ (parse text-pane pos max-length) 1)))))]
-          ;           ;(token-log "OTHER  " start end)
-          ;           ;(add-atribute (. text-pane getDocument) start end Color/BLACK)
-          ;           end))))
-          ]
+(defn print-token
+  [text-pane caption start end]
+  (let [len   (+ (- end start) 1)
+        token (. text-pane getText start len)]
+    (println (format "range:%d～%d, [%s] '%s'" start end caption token))))
+
+(defn skip-whitespaces
+  [text-pane max-length start]
+  (loop [pos start]
     (if (< max-length pos)
-        max-length
-        (let [c        (. text-pane getText pos 1)
-              end      (or (parse-char text-pane pos c)
-                           (parse-string text-pane pos c)
-                           (parse-comment text-pane pos c)
-                           (parse-list text-pane pos c)
-                           ;(parse-atom text-pane pos c)
-                           pos)]
-          (recur text-pane (+ end 1) max-length)))))
+        -1
+        (let [char (.. text-pane (getText pos 1) (charAt 0))]
+          (if (Character/isWhitespace char)
+              (recur (+ pos 1))
+              pos)))))
+
+(declare
+  parse-char
+  parse-comment
+  parse-string
+  parse-list
+  parse-atom)
+
+(defn parse-token
+  [text-pane max-length start]
+  (let [pos start]
+    (let [start-pos (skip-whitespaces text-pane max-length pos)]
+      (if (< start-pos 0)
+          -1
+          (let [c   (. text-pane getText start-pos 1)]
+            (or (parse-char text-pane max-length start-pos c)
+                (parse-string text-pane max-length start-pos c)
+                (parse-comment text-pane max-length start-pos c)
+                (parse-list text-pane max-length start-pos c)
+                (parse-atom text-pane max-length start-pos c)
+                start-pos))))))
+
+(defn parse-document
+  [text-pane]
+  (let [max-length (.. text-pane getDocument getLength)]
+    (loop [pos 0]
+      (if (and (<= 0 pos) (< pos max-length))
+          (let [res (parse-token text-pane max-length pos)]
+            (if (= res -1)
+                nil
+                (recur (+ res 1))))
+          nil))))
+
+(defn parse-char
+  [text-pane max-length start c]
+  (if (not (= c "\\"))
+      nil
+      (let [pos (+ start 1)
+            end (or (get-end text-pane max-length pos "newline")
+                    (get-end text-pane max-length pos "space")
+                    (get-end text-pane max-length pos "tab")
+                    (if (< max-length pos) max-length pos))]
+        (add-attribute (. text-pane getDocument) "char" start end (Color. 204 102 0))
+        ;(print-token text-pane "char   " start end)
+        end)))
+
+(defn parse-comment
+  [text-pane max-length start c]
+  (if (not (= c ";"))
+      nil
+      (loop [pos (+ start 1)]
+        (if (< max-length pos)
+            max-length
+            (let [end (or (get-end text-pane max-length pos "\r\n")
+                          (get-end text-pane max-length pos "\r")
+                          (get-end text-pane max-length pos "\n"))]
+              (if (nil? end)
+                  (recur (+ pos 1))
+                  (do
+                    (add-attribute (. text-pane getDocument) "comment" start end (Color. 0 102 0))
+                    ;(print-token text-pane "comment" start end)
+                    end)))))))
+
+(defn parse-string
+  [text-pane max-length start c]
+  (if (not (= c "\""))
+      nil
+      (let [end (loop [pos (+ start 1)]
+                  (if (< max-length pos)
+                      -1
+                      (let [c (. text-pane getText pos 1)]
+                        (cond (= c "\\")
+                                (recur (+ pos 2))
+                              (= c "\"")
+                                pos
+                              :else
+                                (recur (+ pos 1))))))]
+        (if (< 0 end)
+            (add-attribute (. text-pane getDocument) "string" start end Color/RED))
+        ;(print-token text-pane "string " start end)
+        end)))
+
+(defn parse-list
+  [text-pane max-length start c]
+  (let [pair (left-parentheses-infos c)]
+    (if (nil? pair)
+        nil
+        (let [end (loop [pos (+ start 1)]
+                    (if (< max-length pos)
+                        -1
+                        (if (= pair (. text-pane getText pos 1))
+                            pos
+                            (let [next (parse-token text-pane max-length pos)]
+                              (if (= -1 next)
+                                  -1
+                                  (recur (+ next 1)))))))]
+          (add-attribute (. text-pane getDocument) "left-parenthes" start start Color/BLUE)
+          (if (< 0 end)
+              (add-attribute (. text-pane getDocument) "right-parenthese" end end Color/BLUE))
+          end))))
+
+(defn parse-atom
+  [text-pane max-length start c]
+  (let [end (loop [pos (+ start 1)]
+              (if (< max-length pos)
+                  max-length
+                  (let [val  (. text-pane getText pos 1)
+                        char (. val charAt 0)]
+                    (if (or (Character/isWhitespace char)
+                            (contains? right-parentheses-infos val))
+                        (- pos 1)
+                        (recur (+ pos 1))))))]
+    (add-attribute (. text-pane getDocument) "atom" start end Color/BLACK)
+    ;(print-token text-pane "atom   " start end)
+    end))
+
+(defn parse-at
+  [document offset length]
+  (let [element  (. document getCharacterElement offset)
+        attr     (. element getAttributes)]
+    (println "---")
+    (println "offset:" offset ", length:" length ", element:" element ", attr:" attr)))

@@ -441,9 +441,6 @@
                            (caretUpdate [evt]
                              (let [th1 (make-color-parentheses-thread (. evt getSource) (. evt getDot))]
                                (. th1 start)))))
-      ; (.addCaretListener (proxy [CaretListener] []
-      ;                      (caretUpdate [evt]
-      ;                        (lexer/set-color-parentheses (. evt getSource) (. evt getDot)))))
       )
 
     (doto (. text-pane getDocument)
@@ -451,10 +448,10 @@
                               (changedUpdate [evt] )
                               (insertUpdate [evt] (. text-pane setModified true))
                               (removeUpdate [evt] (. text-pane setModified true))))
-      ; (.addDocumentListener (proxy [DocumentListener] []
-      ;                         (changedUpdate [evt] )
-      ;                         (insertUpdate [evt] (. text-pane setModified true))
-      ;                         (removeUpdate [evt] (. text-pane setModified true))))
+      (.addDocumentListener (proxy [DocumentListener] []
+                              (changedUpdate [evt] )
+                              (insertUpdate [evt] (lexer/parse-at (. evt getDocument) (. evt getOffset) (. evt getLength)))
+                              (removeUpdate [evt] (lexer/parse-at (. evt getDocument) (. evt getOffset) (. evt getLength)))))
       (.addUndoableEditListener um))
 
 
@@ -728,8 +725,12 @@
                                         (changedUpdate [evt] )
                                         (insertUpdate [evt] (. text-pane setModified true))
                                         (removeUpdate [evt] (. text-pane setModified true))))
+                (.addDocumentListener (proxy [DocumentListener] []
+                                        (changedUpdate [evt] )
+                                        (insertUpdate [evt] (lexer/parse-at (. evt getDocument) (. evt getOffset) (. evt getLength)))
+                                        (removeUpdate [evt] (lexer/parse-at (. evt getDocument) (. evt getOffset) (. evt getLength)))))
                 (.addUndoableEditListener (. text-pane getUndoManager)))
-              (lexer/parse text-pane 0 (.. text-pane getDocument getLength)))
+              (lexer/parse-document text-pane))
             (catch FileNotFoundException _ true)
             (catch Exception e
               (. e printStackTrace)
@@ -802,7 +803,8 @@
         attr  (. text-pane getCharacterAttributes)]
     (println "----------")
     (println "pos:" pos)
-    (println "attr:" attr)))
+    (println "attr:" attr)
+    (println "attr-name:" (. attr getAttribute "name"))))
 
 (defaction show-paragraph-attribute [text-pane]
   (let [pos   (. text-pane getCaretPosition)
