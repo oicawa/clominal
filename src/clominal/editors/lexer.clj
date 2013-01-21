@@ -337,12 +337,13 @@
         (let [end (loop [pos (+ start 1)]
                     (if (< max-length pos)
                         -1
-                        (if (= pair (. text-pane getText pos 1))
-                            pos
-                            (let [next (parse-token text-pane max-length pos)]
-                              (if (= -1 next)
-                                  -1
-                                  (recur (+ next 1)))))))]
+                        (let [start-pos (skip-whitespaces text-pane max-length pos)]
+                          (if (= pair (. text-pane getText start-pos 1))
+                              start-pos
+                              (let [next (parse-token text-pane max-length start-pos)]
+                                (if (= -1 next)
+                                    -1
+                                    (recur (+ next 1))))))))]
           (add-attribute (. text-pane getDocument) "left-parenthes" start start Color/BLUE)
           (if (< 0 end)
               (add-attribute (. text-pane getDocument) "right-parenthese" end end Color/BLUE))
