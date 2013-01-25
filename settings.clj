@@ -48,6 +48,8 @@
    '(Alt \p) editor/show-paragraph-attribute
    '(Ctrl \i) editor/show-attribute
    '((Ctrl \t) \c) editor/show-color-dialog
+
+   '(Ctrl Alt \h) editor/move-prev-s-expression
   })
 
 (doseq [setting editor-keybind-settings]

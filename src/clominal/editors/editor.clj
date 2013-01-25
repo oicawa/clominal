@@ -719,7 +719,8 @@
               (let [document (. text-pane getDocument)]
                 (doto text-pane
                   (.read stream document)
-                  (.setModified false)))
+                  (.setModified false))
+                (lexer/parse-document (. text-pane getDocument)))
               (doto (. text-pane getDocument)
                 (.addDocumentListener (proxy [DocumentListener] []
                                         (changedUpdate [evt] )
@@ -727,10 +728,22 @@
                                         (removeUpdate [evt] (. text-pane setModified true))))
                 (.addDocumentListener (proxy [DocumentListener] []
                                         (changedUpdate [evt] )
-                                        (insertUpdate [evt] (lexer/parse-at (. evt getDocument) (. evt getOffset) (. evt getLength)))
-                                        (removeUpdate [evt] (lexer/parse-at (. evt getDocument) (. evt getOffset) (. evt getLength)))))
-                (.addUndoableEditListener (. text-pane getUndoManager)))
-              (lexer/parse-document text-pane))
+                                        (insertUpdate [evt]
+                                          (let [doc    (. evt getDocument)
+                                                offset (. evt getOffset)
+                                                length (. evt getLength)]
+                                            (SwingUtilities/invokeLater
+                                              (fn []
+                                                (lexer/parse-at doc offset length)))))
+                                        (removeUpdate [evt]
+                                          (let [doc    (. evt getDocument)
+                                                offset (. evt getOffset)
+                                                length (. evt getLength)]
+                                            (SwingUtilities/invokeLater
+                                              (fn []
+                                                (lexer/parse-at doc offset length)))))
+                                        ))
+                (.addUndoableEditListener (. text-pane getUndoManager))))
             (catch FileNotFoundException _ true)
             (catch Exception e
               (. e printStackTrace)
@@ -844,3 +857,8 @@
               val   (format "(Color %d %d %d)" (. color getRed) (. color getGreen) (. color getBlue))
               style (. (StyleContext/getDefaultStyleContext) getStyle StyleContext/DEFAULT_STYLE)]
           (. doc insertString pos val style)))))
+
+(defaction move-prev-s-expression [text-pane]
+  (let [caret-pos (. text-pane getCaretPosition)
+        prev-pos  (lexer/get-prev-s-expression (. text-pane getDocument) caret-pos)]
+    (. text-pane setCaretPosition prev-pos)))
