@@ -367,78 +367,91 @@
     ;(print-token document "atom   " start atom-end)
     atom-end))
 
+(defn get-offset-which-s-expression
+  [document
+   offset
+   in-parenthesis
+   out-parenthesis
+   point-offset
+   direction
+   get-next-pos
+   init-out-paren
+   next-in-paren]
+  (loop [fix nil
+         pos offset
+         cnt 0]
+    (if (< pos 0)
+        fix
+        (let [element  (. document getCharacterElement pos)
+              next-pos (get-next-pos element)
+              attrs    (. element getAttributes)
+              name     (. attrs getAttribute "name")]
+          (cond (nil? name)
+                  (recur pos (+ next-pos point-offset) cnt)
+                (= name out-parenthesis)
+                  (cond (= cnt 0)
+                          (if (nil? fix)
+                              (recur pos (init-out-paren pos) cnt) 
+                              fix)
+                        (= cnt 1)
+                          (+ (+ pos 1) point-offset)
+                        :else
+                          (recur (+ (+ pos 1) point-offset)
+                                 (+ pos direction)
+                                 (- cnt 1)))
+                (= name in-parenthesis)
+                  (recur pos
+                         (+ pos direction)
+                         (next-in-paren fix cnt))
+                (= pos next-pos)
+                  (recur pos (+ pos direction) cnt)
+                :else
+                  (if (= cnt 0)
+                      next-pos
+                      (recur next-pos (+ next-pos point-offset) cnt)))))))
+     
 (defn get-offset-backward-s-expression
   [document offset]
-  (loop [fix nil
-         pos offset
-         cnt 0]
-    (let [element (. document getCharacterElement pos)
-          start   (. element getStartOffset)
-          name    (.. element getAttributes (getAttribute "name"))]
-      ;(println "fix:" fix ", pos:" pos ", start:" start ", name:" name ", cnt:" cnt)
-      (cond (nil? name)
-              (recur pos (- start 1) cnt)
-            (= name "left-parenthesis")
-              (cond (= cnt 0)
-                      (if (nil? fix)
-                          (recur pos (- pos 1) cnt)
-                          fix)
-                    (= cnt 1)
-                      pos
-                    :else
-                      (recur pos (- pos 1) (- cnt 1)))
-            (= name "right-parenthesis")
-              (recur pos (- pos 1) (if (nil? fix) 0 (+ cnt 1)))
-            (= pos start)
-              (recur pos (- pos 1) cnt)
-            :else
-              (if (= cnt 0)
-                  start
-                  (recur start (- start 1) cnt))))))
-
+  (get-offset-which-s-expression
+    document
+    offset
+    "right-parenthesis"
+    "left-parenthesis"
+    -1
+    -1
+    (fn [element] (. element getStartOffset))
+    (fn [pos] (- pos 1))
+    (fn [fix cnt] (if (nil? fix) 0 (+ cnt 1)))))
+      
 (defn get-offset-forward-s-expression
   [document offset]
-  (loop [fix nil
-         pos offset
-         cnt 0]
-    (let [element (. document getCharacterElement pos)
-          end     (. element getEndOffset)
-          name    (.. element getAttributes (getAttribute "name"))]
-      ;(println "fix:" fix ", pos:" pos ", end:" end ", name:" name ", cnt:" cnt)
-      (cond (nil? name)
-              (recur pos end cnt)
-            (= name "right-parenthesis")
-              (cond (= cnt 0)
-                      (if (nil? fix)
-                          pos
-                          fix)
-                    (= cnt 1)
-                      (+ pos 1)
-                    :else
-                      (recur (+ pos 1) (+ pos 1) (- cnt 1)))
-            (= name "left-parenthesis")
-              (recur pos (+ pos 1) (+ cnt 1))
-            (= pos end)
-              (recur pos (+ pos 1) cnt)
-            :else
-              (if (= cnt 0)
-                  end
-                  (recur end end cnt))))))
+  (get-offset-which-s-expression
+    document
+    offset
+    "left-parenthesis"
+    "right-parenthesis"
+    0
+    1
+    (fn [element] (. element getEndOffset))
+    (fn [pos] -1)
+    (fn [fix cnt] (+ cnt 1))))
 
-(defn get-outer-s-expression-start
+
+(defn get-offset-parent-s-expression
   [document offset]
-  (loop [pos (- offset 1)
-         cnt 0]
-    (let [element (. document getCharacterElement pos)
-          name    (.. element getAttributes (getAttribute "name"))]
-      (cond (= name "left-parenthesis")
-              (if (= cnt 0)
-                  pos
-                  (recur (- pos 1) (- cnt 1)))
-            (= name "right-parenthesis")
-              (recur (- pos 1) (+ cnt 1))
-            :else
-              (recur (- pos (. element getStartOffset)) cnt)))))
+  (let [start (loop [pos offset]
+                (let [next-pos (get-offset-backward-s-expression document pos)]
+                  (if (= pos next-pos)
+                      pos
+                      (recur next-pos))))]
+    (loop [pos start]
+      (let [element (. document getCharacterElement pos)
+            start   (. element getStartOffset)
+            attrs   (. element getAttributes)
+            name    (. attrs getAttribute "name")]
+        (if (= name "left-parenthesis")
+            start
+            (recur (- start 1)))))))
               
 ; (defn parse-at
 ;   [document offset length]

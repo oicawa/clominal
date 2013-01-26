@@ -50,6 +50,7 @@
    '((Ctrl \t) \c) editor/show-color-dialog
 
    '(Ctrl Alt \h) editor/backward-s-expression
+   '(Ctrl Alt \k) editor/parent-s-expression
    '(Ctrl Alt \l) editor/forward-s-expression
   })
 
