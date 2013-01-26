@@ -873,4 +873,10 @@
         pos       (lexer/get-offset-parent-s-expression (. text-pane getDocument) caret-pos)]
     (. text-pane setCaretPosition pos)))
 
+(defaction child-s-expression [text-pane]
+  (let [caret-pos (. text-pane getCaretPosition)
+        pos       (lexer/get-offset-child-s-expression (. text-pane getDocument) caret-pos)]
+    (. text-pane setCaretPosition pos)))
+
+
 

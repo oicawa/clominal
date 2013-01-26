@@ -453,6 +453,20 @@
             start
             (recur (- start 1)))))))
               
+(defn get-offset-child-s-expression
+  [document offset]
+  (loop [pos offset]
+    (let [element (. document getCharacterElement pos)
+          end     (. element getEndOffset)
+          attrs   (. element getAttributes)
+          name    (. attrs getAttribute "name")]
+      (cond (= name "left-parenthesis")
+              end
+            (= name "right-parenthesis")
+              offset
+            :else
+              (recur end )))))
+              
 ; (defn parse-at
 ;   [document offset length]
 ;   (let [caret      (+ offset length)
