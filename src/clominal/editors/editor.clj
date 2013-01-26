@@ -858,7 +858,7 @@
               style (. (StyleContext/getDefaultStyleContext) getStyle StyleContext/DEFAULT_STYLE)]
           (. doc insertString pos val style)))))
 
-(defaction move-prev-s-expression [text-pane]
+(defaction backward-s-expression [text-pane]
   (let [caret-pos (. text-pane getCaretPosition)
-        prev-pos  (lexer/get-prev-s-expression (. text-pane getDocument) caret-pos)]
+        prev-pos  (lexer/get-offset-backward-s-expression (. text-pane getDocument) caret-pos)]
     (. text-pane setCaretPosition prev-pos)))

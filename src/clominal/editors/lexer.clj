@@ -367,7 +367,7 @@
     ;(print-token document "atom   " start atom-end)
     atom-end))
 
-(defn get-prev-s-expression
+(defn get-offset-backward-s-expression
   [document offset]
   (loop [fix nil
          pos offset
@@ -388,7 +388,7 @@
                     :else
                       (recur pos (- pos 1) (- cnt 1)))
             (= name "right-parenthesis")
-              (recur pos (- pos 1) (+ cnt 1))
+              (recur pos (- pos 1) (if (nil? fix) 0 (+ cnt 1)))
             (= pos start)
               (recur pos (- pos 1) cnt)
             :else

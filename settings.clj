@@ -49,7 +49,7 @@
    '(Ctrl \i) editor/show-attribute
    '((Ctrl \t) \c) editor/show-color-dialog
 
-   '(Ctrl Alt \h) editor/move-prev-s-expression
+   '(Ctrl Alt \h) editor/backward-s-expression
   })
 
 (doseq [setting editor-keybind-settings]
