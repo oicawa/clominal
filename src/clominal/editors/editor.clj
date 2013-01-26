@@ -860,5 +860,12 @@
 
 (defaction backward-s-expression [text-pane]
   (let [caret-pos (. text-pane getCaretPosition)
-        prev-pos  (lexer/get-offset-backward-s-expression (. text-pane getDocument) caret-pos)]
-    (. text-pane setCaretPosition prev-pos)))
+        pos       (lexer/get-offset-backward-s-expression (. text-pane getDocument) caret-pos)]
+    (. text-pane setCaretPosition pos)))
+
+(defaction forward-s-expression [text-pane]
+  (let [caret-pos (. text-pane getCaretPosition)
+        pos       (lexer/get-offset-forward-s-expression (. text-pane getDocument) caret-pos)]
+    (. text-pane setCaretPosition pos)))
+
+

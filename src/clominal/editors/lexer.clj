@@ -396,29 +396,34 @@
                   start
                   (recur start (- start 1) cnt))))))
 
-(defn get-next-s-expression
+(defn get-offset-forward-s-expression
   [document offset]
   (loop [fix nil
          pos offset
          cnt 0]
     (let [element (. document getCharacterElement pos)
-          start   (. element getStartOffset)
+          end     (. element getEndOffset)
           name    (.. element getAttributes (getAttribute "name"))]
-      ;(println "fix:" fix ", pos:" pos ", start:" start ", name:" name ", cnt:" cnt)
+      ;(println "fix:" fix ", pos:" pos ", end:" end ", name:" name ", cnt:" cnt)
       (cond (nil? name)
-              (recur pos (- start 1) cnt)
-            (= name "left-parenthesis")
-              (if (= cnt 1)
-                  fix
-                  (recur pos (- pos 1) (- cnt 1)))
+              (recur pos end cnt)
             (= name "right-parenthesis")
-              (recur pos (- pos 1) (+ cnt 1))
-            (= pos start)
-              (recur pos (- pos 1) cnt)
+              (cond (= cnt 0)
+                      (if (nil? fix)
+                          pos
+                          fix)
+                    (= cnt 1)
+                      (+ pos 1)
+                    :else
+                      (recur (+ pos 1) (+ pos 1) (- cnt 1)))
+            (= name "left-parenthesis")
+              (recur pos (+ pos 1) (+ cnt 1))
+            (= pos end)
+              (recur pos (+ pos 1) cnt)
             :else
               (if (= cnt 0)
-                  start
-                  (recur start (- start 1) cnt))))))
+                  end
+                  (recur end end cnt))))))
 
 (defn get-outer-s-expression-start
   [document offset]
