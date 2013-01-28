@@ -450,8 +450,20 @@
                               (removeUpdate [evt] (. text-pane setModified true))))
       (.addDocumentListener (proxy [DocumentListener] []
                               (changedUpdate [evt] )
-                              (insertUpdate [evt] (lexer/parse-at (. evt getDocument) (. evt getOffset) (. evt getLength)))
-                              (removeUpdate [evt] (lexer/parse-at (. evt getDocument) (. evt getOffset) (. evt getLength)))))
+                              (insertUpdate [evt]
+                                (let [doc    (. evt getDocument)
+                                      offset (. evt getOffset)
+                                      length (. evt getLength)]
+                                  (SwingUtilities/invokeLater
+                                    (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
+                                      (. th start)))))
+                              (removeUpdate [evt]
+                                (let [doc    (. evt getDocument)
+                                      offset (. evt getOffset)
+                                      length (. evt getLength)]
+                                  (SwingUtilities/invokeLater
+                                    (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
+                                      (. th start)))))))
       (.addUndoableEditListener um))
 
 
@@ -720,7 +732,7 @@
                 (doto text-pane
                   (.read stream document)
                   (.setModified false))
-                (lexer/parse-document (. text-pane getDocument)))
+                (lexer/parse-document (. text-pane getDocument) 0 (.. text-pane getDocument getLength)))
               (doto (. text-pane getDocument)
                 (.addDocumentListener (proxy [DocumentListener] []
                                         (changedUpdate [evt] )
@@ -732,17 +744,22 @@
                                           (let [doc    (. evt getDocument)
                                                 offset (. evt getOffset)
                                                 length (. evt getLength)]
-                                            (SwingUtilities/invokeLater
-                                              (fn []
-                                                (lexer/parse-at doc offset length)))))
+                                            ; (SwingUtilities/invokeLater
+                                            ;   (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
+                                            ;     (. th start)))
+                                            (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
+                                              (. th start))
+                                                ))
                                         (removeUpdate [evt]
                                           (let [doc    (. evt getDocument)
                                                 offset (. evt getOffset)
                                                 length (. evt getLength)]
-                                            (SwingUtilities/invokeLater
-                                              (fn []
-                                                (lexer/parse-at doc offset length)))))
-                                        ))
+                                            ; (SwingUtilities/invokeLater
+                                            ;   (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
+                                            ;     (. th start)))
+                                            (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
+                                              (. th start))
+                                                ))))
                 (.addUndoableEditListener (. text-pane getUndoManager))))
             (catch FileNotFoundException _ true)
             (catch Exception e
@@ -810,21 +827,6 @@
           
 
 
-
-(defaction show-attribute [text-pane]
-  (let [pos   (. text-pane getCaretPosition)
-        attr  (. text-pane getCharacterAttributes)]
-    (println "----------")
-    (println "pos:" pos)
-    (println "attr:" attr)
-    (println "attr-name:" (. attr getAttribute "name"))))
-
-(defaction show-paragraph-attribute [text-pane]
-  (let [pos   (. text-pane getCaretPosition)
-        attr  (. text-pane getParagraphAttributes)]
-    (println "----------")
-    (println "pos:" pos)
-    (println "attr:" attr)))
 
 (defaction set-character-attribute [text-pane]
   (let [start (. text-pane getSelectionStart)

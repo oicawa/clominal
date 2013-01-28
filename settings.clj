@@ -2,6 +2,7 @@
   (:require [clominal.keys :as keys]
             [clominal.frame :as frame]
             [clominal.editors.editor :as editor]
+            [clominal.editors.lexer :as lexer]
             ))
 
 ;;------------------------------
@@ -42,11 +43,7 @@
    '(Ctrl \e) editor/escape
    '(Ctrl \g) editor/goto-line
 
-   ;'((Ctrl \i) \f) editor/print-font-names
-   '(Ctrl \u) editor/set-character-attribute
-   ;'(Ctrl \p) editor/set-paragraph-attribute
-   '(Alt \p) editor/show-paragraph-attribute
-   '(Ctrl \i) editor/show-attribute
+   '(Ctrl \i) lexer/show-attribute
    '((Ctrl \t) \c) editor/show-color-dialog
 
    '(Ctrl Alt \h) editor/backward-s-expression
