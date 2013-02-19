@@ -43,13 +43,15 @@
    '(Ctrl \e) editor/escape
    '(Ctrl \g) editor/goto-line
 
-   '(Ctrl \i) lexer/show-attribute
-   '((Ctrl \t) \c) editor/show-color-dialog
+   ;'(Ctrl \i) lexer/show-attribute
+   ;'(Ctrl \m) editor/set-character-attribute
+   ;'(Ctrl \t) lexer/tokenize
+   ;'((Ctrl \t) \c) editor/show-color-dialog
 
-   '(Ctrl Alt \h) editor/backward-s-expression
-   '(Ctrl Alt \j) editor/child-s-expression
-   '(Ctrl Alt \k) editor/parent-s-expression
-   '(Ctrl Alt \l) editor/forward-s-expression
+   ;'(Ctrl Alt \h) editor/backward-s-expression
+   ;'(Ctrl Alt \j) editor/child-s-expression
+   ;'(Ctrl Alt \k) editor/parent-s-expression
+   ;'(Ctrl Alt \l) editor/forward-s-expression
   })
 
 (doseq [setting editor-keybind-settings]

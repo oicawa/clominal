@@ -1,4 +1,4 @@
-(ns clominal.editors.lexer
+(ns mode.clj_mode
   (:import (clojure.lang LineNumberingPushbackReader LispReader)
            (java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
            (java.awt.event ActionEvent)
@@ -10,13 +10,16 @@
                         SwingUtilities AbstractAction)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
            (javax.swing.event CaretListener DocumentListener)
-           (javax.swing.text StyleConstants Utilities DefaultEditorKit DefaultHighlighter$DefaultHighlightPainter SimpleAttributeSet)
+           (javax.swing.text StyleConstants Utilities DefaultEditorKit DefaultHighlighter$DefaultHighlightPainter SimpleAttributeSet
+                             DefaultStyledDocument StyleContext)
+
            (javax.swing.undo UndoManager)
            (java.io File FileInputStream FileWriter FileNotFoundException))
   (:require [clominal.keys :as keys])
-  ;(:require [clominal.dialog :as dialog])
+  (:require [clominal.editors.editor :as editor])
   (:use [clominal.utils]))
 
+(def mode-name "clojure-mode")
 
 (def parentheses-NG-highlite (DefaultHighlighter$DefaultHighlightPainter. Color/PINK))
 (def parentheses-OK-highlite (DefaultHighlighter$DefaultHighlightPainter. Color/CYAN))
@@ -134,11 +137,39 @@
               end   (+ start 1)]
           (add-highlight text-pane start end highlight)))))
 
+(defn set-color-parentheses1
+  [text-pane pos]
+  (remove-highlight text-pane parentheses-NG-highlite)
+  (remove-highlight text-pane parentheses-OK-highlite)
+  (let [max-length (.. text-pane getDocument getLength)
+        src-info   (get-parentheses-current text-pane pos)
+        dst-info   (if (nil? src-info) nil (get-parentheses-pair text-pane src-info max-length))
+        highlight  (cond (nil? src-info) nil
+                         (nil? dst-info) parentheses-NG-highlite
+                         (< dst-info 0)  parentheses-NG-highlite
+                         :else           parentheses-OK-highlite)]
+    (if (not (nil? src-info))
+        (let [start (src-info :src-pos)
+              end   (+ start 1)]
+          (add-highlight text-pane start end highlight)))
+
+    (if (not (nil? dst-info))
+        (let [dst-pos (Math/abs dst-info)
+              start dst-pos
+              end   (+ start 1)]
+          (add-highlight text-pane start end highlight)))))
+
+(defn make-color-parentheses-thread
+  [text-pane position]
+  (Thread. (fn []
+             (set-color-parentheses text-pane position))))
+
 (defn print-token
   [document caption start end]
   (let [len   (- end start)
         token (. document getText start len)]
-    (println (format "range:%d～%d, [%s] '%s'" start end caption token))))
+    (println (format "range:%d～%d, [%s] '%s'" start end caption token))
+    ))
 
 (defn add-attribute
   [doc attr-name start end color]
@@ -161,6 +192,27 @@
     (. document setCharacterAttributes start (- end start) nil true)
     ))
 
+
+(defaction set-character-attribute [text-pane]
+  (let [start (. text-pane getSelectionStart)
+        end   (. text-pane getSelectionEnd)
+        doc   (. text-pane getDocument)]
+    ; (SwingUtilities/invokeLater
+    ;   (fn []
+    ;     (add-attribute doc "atom" start (- end start) Color/RED)
+    ;     (print-token doc "check" start end)))
+
+    (add-attribute doc "atom" start (- end start) Color/RED)
+    (print-token doc "check" start end)
+
+    ;(println (format "-----\nstart:%d, end:%d" start end))
+    ; (if (= start end)
+    ;     nil
+    ;     (let [attr (SimpleAttributeSet.)
+    ;           doc  (. text-pane getDocument)]
+    ;       (StyleConstants/setForeground attr Color/RED)
+    ;       (. doc setCharacterAttributes start (- end start) attr true)))
+          ))
 
 (defn get-end
   [document start end value]
@@ -275,7 +327,7 @@
                              pos
                              (recur (+ pos 1))))))]
     (add-attribute document "atom" start atom-end Color/BLACK)
-    (print-token document "atom   " start atom-end)
+    ;(print-token document "atom   " start atom-end)
     atom-end))
 
 (defn parse-token
@@ -409,36 +461,61 @@
             :else
               (recur end )))))
 
+; (defn get-token-*-offset
+;   [document pos cnt step]
+;   (letfn [(get-next-pos
+;             [document pos step]
+;             (let [element  (. document getCharacterElement pos)
+;                   name     (.. element getAttributes (getAttribute "name"))
+;                   next-pos (cond (< step 0) (. element getStartOffset)
+;                                  (< 0 step) (. element getEndOffset)
+;                                  :else      (assert "'step' must be 1 or -1."))]
+;               (if (nil? name)
+;                   (recur document (+ next-pos step) step)
+;                   next-pos)))]
+;     (loop [i    0
+;            base pos]
+;       (let [next-pos (get-next-pos document base step)]
+;         (if (= i cnt)
+;             next-pos
+;             (recur (+ i 1) (+ next-pos step)))))))
+
+
+
 (defn get-token-*-offset
   [document pos cnt step]
-  (letfn [(get-next-pos
-            [document pos step]
-            (let [element  (. document getCharacterElement pos)
-                  name     (.. element getAttributes (getAttribute "name"))
-                  next-pos (cond (< step 0) (. element getStartOffset)
-                                 (< 0 step) (. element getEndOffset)
-                                 :else      (assert "'step' must be 1 or -1."))]
-              (if (nil? name)
-                  (recur document (+ next-pos step) step)
-                  next-pos)))]
+  (letfn [(get-pos
+            [element step]
+            (cond (< step 0) (. element getStartOffset)
+                  (< 0 step) (. element getEndOffset)
+                  :else      (assert "'step' must be 1 or -1.")))
+
+          (whitespace?
+            [element]
+            (let [name (.. element getAttributes (getAttribute "name"))]
+              (or (= "" name) (nil? name))))
+
+          (get-element
+            [document offset]
+            (. document getCharacterElement offset))]
     (loop [i    0
            base pos]
-      (let [next-pos (get-next-pos document base step)]
-        (if (= i cnt)
-            next-pos
-            (recur (+ i 1) (+ next-pos step)))))))
+      (let [element   (get-element document base)
+            next-base (get-pos element step)]
+        ;(print-token document "***token***" (. element getStartOffset)(. element getEndOffset))
+        (if (whitespace? element)
+            (recur (+ i 1) (+ next-base step))
+            (if (< cnt i)
+                next-base
+                (recur i (+ next-base step))))))))
               
 (defn parse-at
   [document offset length]
+  ;(parse-document document 0 (. document getLength))
   (let [start (get-token-*-offset document offset 2 -1)
         end   (get-token-*-offset document offset 2 1)]
-    ;(print-token document "TARGET " start end)
-    ;(parse-token document start end)
-    ;(remove-attributes document start end)
-    (parse-document document start end)
-    ;(parse-document document 0 (. document getLength))
-    ))
-
+    (parse-document document start end))
+    )
 
 
 (defaction show-attribute
@@ -455,6 +532,7 @@
     (println "name:" name)
     (print-token document "token" start end)))
 
+
 (defn add-attribute1
   [doc attr-name start end color]
   (let [attr (SimpleAttributeSet.)
@@ -463,16 +541,63 @@
     (. attr addAttribute "name" attr-name)
     (. doc setCharacterAttributes start len attr true)))
 
+
 (defaction tokenize
   [text-pane]
   (let [document (. text-pane getDocument)
         start    (. text-pane getSelectionStart)
         end      (. text-pane getSelectionEnd)]
     ;(add-attribute1 document "test" start end Color/RED)
-    (add-attribute1 (. text-pane getDocument) "test" start end Color/RED)
-    ))
+    (add-attribute1 (. text-pane getDocument) "test" start end Color/RED)))
 
-(defn add-document-listener
+
+(defn add-coloring-pair-parentheses
+  [text-pane]
+  (doto text-pane
+    (.addCaretListener (proxy [CaretListener] []
+                         (caretUpdate [evt]
+                           (let [th1 (make-color-parentheses-thread (. evt getSource) (. evt getDot))]
+                             (. th1 start)))))))
+; (defn add-coloring-parser
+;   [text-pane]
+;   (doto (. text-pane getDocument)
+;     (.addDocumentListener (proxy [DocumentListener] []
+;                             (changedUpdate [evt] )
+;                             (insertUpdate [evt]
+;                               (let [doc    (. evt getDocument)
+;                                     offset (. evt getOffset)
+;                                     length (. evt getLength)]
+;                                 (SwingUtilities/invokeLater
+;                                   (let [th (Thread. (fn [] (parse-at doc offset length)))]
+;                                     (. th start)))))
+;                             (removeUpdate [evt]
+;                               (let [doc    (. evt getDocument)
+;                                     offset (. evt getOffset)
+;                                     length (. evt getLength)]
+;                                 (SwingUtilities/invokeLater
+;                                   (let [th (Thread. (fn [] (parse-at doc offset length)))]
+;                                     (. th start)))))))))
+
+;;; *NG*
+; (defn add-coloring-parser
+;   [text-pane]
+;   (doto (. text-pane getDocument)
+;     (.addDocumentListener (proxy [DocumentListener] []
+;                             (changedUpdate [evt] )
+;                             (insertUpdate [evt]
+;                               (let [doc    (. evt getDocument)
+;                                     offset (. evt getOffset)
+;                                     length (. evt getLength)
+;                                     th     (Thread. (fn [] (parse-at doc offset length)))]
+;                                 (. th start)))
+;                             (removeUpdate [evt]
+;                               (let [doc    (. evt getDocument)
+;                                     offset (. evt getOffset)
+;                                     length (. evt getLength)
+;                                     th     (Thread. (fn [] (parse-at doc offset length)))]
+;                                 (. th start)))))))
+
+(defn add-coloring-parser
   [text-pane]
   (doto (. text-pane getDocument)
     (.addDocumentListener (proxy [DocumentListener] []
@@ -482,12 +607,65 @@
                                     offset (. evt getOffset)
                                     length (. evt getLength)]
                                 (SwingUtilities/invokeLater
-                                  (let [th (Thread. (fn [] (parse-at doc offset length)))]
-                                    (. th start)))))
+                                  (fn []
+                                    (println "[ START ]parse-at")
+                                    (parse-at doc offset length)
+                                    (println "[  END  ]parse-at")))))
                             (removeUpdate [evt]
                               (let [doc    (. evt getDocument)
                                     offset (. evt getOffset)
                                     length (. evt getLength)]
                                 (SwingUtilities/invokeLater
-                                  (let [th (Thread. (fn [] (parse-at doc offset length)))]
-                                    (. th start)))))))))
+                                  (fn []
+                                    (println "[ START ]parse-at")
+                                    (parse-at doc offset length)
+                                    (println "[  END  ]parse-at")))))))))
+
+(defaction backward-s-expression [text-pane]
+  (let [caret-pos (. text-pane getCaretPosition)
+        ;pos       (get-offset-backward-s-expression (. text-pane getDocument) caret-pos)
+        pos       (get-token-*-offset (. text-pane getDocument) caret-pos 1 -1)]
+    (. text-pane setCaretPosition pos)))
+
+(defaction forward-s-expression [text-pane]
+  (let [caret-pos (. text-pane getCaretPosition)
+        ;pos       (get-offset-forward-s-expression (. text-pane getDocument) caret-pos)
+        pos       (get-token-*-offset (. text-pane getDocument) caret-pos 1 1)]
+    (. text-pane setCaretPosition pos)))
+
+(defaction parent-s-expression [text-pane]
+  (let [caret-pos (. text-pane getCaretPosition)
+        pos       (get-offset-parent-s-expression (. text-pane getDocument) caret-pos)]
+    (. text-pane setCaretPosition pos)))
+
+(defaction child-s-expression [text-pane]
+  (let [caret-pos (. text-pane getCaretPosition)
+        pos       (get-offset-child-s-expression (. text-pane getDocument) caret-pos)]
+    (. text-pane setCaretPosition pos)))
+
+(defn init-mode
+  [text-pane]
+  (println "[clojure-mode] Loading ...")
+  (add-coloring-pair-parentheses text-pane)
+  (add-coloring-parser text-pane)
+  (parse-document (. text-pane getDocument) 0 (.. text-pane getDocument getLength))
+
+  ; keybinds
+  (let [settings {
+                  '(Ctrl Alt \h) backward-s-expression
+                  '(Ctrl Alt \j) child-s-expression
+                  '(Ctrl Alt \k) parent-s-expression
+                  '(Ctrl Alt \l) forward-s-expression
+                  '(Ctrl \i) show-attribute
+                  '(Ctrl \m) set-character-attribute
+                  '(Ctrl \t) tokenize
+                 }]
+    (doseq [setting settings]
+      (let [keybind (setting 0)
+            action  (setting 1)]
+        (keys/define-keybind editor/maps keybind action))))
+  (println "[clojure-mode] Loading completed."))
+
+
+
+

@@ -301,11 +301,6 @@
         (. rect setLocation (- (. rect x) 10) (- (. rect y) 45))
         rect))))
 
-(defn make-color-parentheses-thread
-  [text-pane position]
-  (Thread. (fn []
-             (lexer/set-color-parentheses text-pane position))))
-
 ;
 ; Text Editor
 ;
@@ -437,10 +432,6 @@
       (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
       (.setActionMap (. default-map getActionMap))
       (.enableInputMethods true)
-      (.addCaretListener (proxy [CaretListener] []
-                           (caretUpdate [evt]
-                             (let [th1 (make-color-parentheses-thread (. evt getSource) (. evt getDot))]
-                               (. th1 start)))))
       )
 
     (doto (. text-pane getDocument)
@@ -448,22 +439,6 @@
                               (changedUpdate [evt] )
                               (insertUpdate [evt] (. text-pane setModified true))
                               (removeUpdate [evt] (. text-pane setModified true))))
-      (.addDocumentListener (proxy [DocumentListener] []
-                              (changedUpdate [evt] )
-                              (insertUpdate [evt]
-                                (let [doc    (. evt getDocument)
-                                      offset (. evt getOffset)
-                                      length (. evt getLength)]
-                                  (SwingUtilities/invokeLater
-                                    (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
-                                      (. th start)))))
-                              (removeUpdate [evt]
-                                (let [doc    (. evt getDocument)
-                                      offset (. evt getOffset)
-                                      length (. evt getLength)]
-                                  (SwingUtilities/invokeLater
-                                    (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
-                                      (. th start)))))))
       (.addUndoableEditListener um))
 
 
@@ -708,7 +683,30 @@
   (. text-pane setMark false))
 
 
+(defn get-extension
+  [file-path]
+  (let [index (. file-path lastIndexOf ".")]
+    (if (< 0 index)
+        (. file-path substring (+ index 1))
+        "")))
 
+(defn get-mode-package
+  [ext]
+  (let [s (symbol "mode" (format "%s-mode" ext))]
+    (println "mode-name:" s)
+    (require s)))
+
+(defn apply-editor-mode
+  [text-pane]
+  (println "apply-editor-mode")
+  (let [ext                  (get-extension (. text-pane getPath))
+        namespace-name       (format "mode.%s_mode" ext)
+        get-mode-name-symbol (symbol namespace-name "get-mode-name")
+        ]
+    (require (symbol namespace-name))
+    (apply (find-var 'mode.clj_mode/init-mode) [text-pane])
+    ;(println (all-ns))
+    ))
 
 ;;
 ;; File action group.
@@ -731,36 +729,16 @@
               (let [document (. text-pane getDocument)]
                 (doto text-pane
                   (.read stream document)
-                  (.setModified false))
-                (lexer/parse-document (. text-pane getDocument) 0 (.. text-pane getDocument getLength)))
+                  (.setModified false)))
               (doto (. text-pane getDocument)
                 (.addDocumentListener (proxy [DocumentListener] []
                                         (changedUpdate [evt] )
                                         (insertUpdate [evt] (. text-pane setModified true))
                                         (removeUpdate [evt] (. text-pane setModified true))))
-                (.addDocumentListener (proxy [DocumentListener] []
-                                        (changedUpdate [evt] )
-                                        (insertUpdate [evt]
-                                          (let [doc    (. evt getDocument)
-                                                offset (. evt getOffset)
-                                                length (. evt getLength)]
-                                            ; (SwingUtilities/invokeLater
-                                            ;   (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
-                                            ;     (. th start)))
-                                            (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
-                                              (. th start))
-                                                ))
-                                        (removeUpdate [evt]
-                                          (let [doc    (. evt getDocument)
-                                                offset (. evt getOffset)
-                                                length (. evt getLength)]
-                                            ; (SwingUtilities/invokeLater
-                                            ;   (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
-                                            ;     (. th start)))
-                                            (let [th (Thread. (fn [] (lexer/parse-at doc offset length)))]
-                                              (. th start))
-                                                ))))
-                (.addUndoableEditListener (. text-pane getUndoManager))))
+                (.addUndoableEditListener (. text-pane getUndoManager)))
+              (apply-editor-mode text-pane)
+              (println "Mode loading has completed.")
+              )
             (catch FileNotFoundException _ true)
             (catch Exception e
               (. e printStackTrace)
@@ -782,7 +760,9 @@
 (defaction file-save
   [text-pane]
   (if (= nil (. text-pane getPath))
-      (. text-pane saveAs)
+      (do
+        (. text-pane saveAs)
+        (apply-editor-mode text-pane))
       (. text-pane save)))
 
 (defaction close
@@ -828,17 +808,6 @@
 
 
 
-(defaction set-character-attribute [text-pane]
-  (let [start (. text-pane getSelectionStart)
-        end   (. text-pane getSelectionEnd)]
-    (println (format "-----\nstart:%d, end:%d" start end))
-    (if (= start end)
-        nil
-        (let [attr (SimpleAttributeSet.)
-              doc  (. text-pane getDocument)]
-          (StyleConstants/setForeground attr Color/RED)
-          (. doc setCharacterAttributes start (- end start) attr false)))))
-
 (defaction set-paragraph-attribute [text-pane]
   (let [start (. text-pane getSelectionStart)
         end   (. text-pane getSelectionEnd)]
@@ -860,25 +829,6 @@
               style (. (StyleContext/getDefaultStyleContext) getStyle StyleContext/DEFAULT_STYLE)]
           (. doc insertString pos val style)))))
 
-(defaction backward-s-expression [text-pane]
-  (let [caret-pos (. text-pane getCaretPosition)
-        pos       (lexer/get-offset-backward-s-expression (. text-pane getDocument) caret-pos)]
-    (. text-pane setCaretPosition pos)))
-
-(defaction forward-s-expression [text-pane]
-  (let [caret-pos (. text-pane getCaretPosition)
-        pos       (lexer/get-offset-forward-s-expression (. text-pane getDocument) caret-pos)]
-    (. text-pane setCaretPosition pos)))
-
-(defaction parent-s-expression [text-pane]
-  (let [caret-pos (. text-pane getCaretPosition)
-        pos       (lexer/get-offset-parent-s-expression (. text-pane getDocument) caret-pos)]
-    (. text-pane setCaretPosition pos)))
-
-(defaction child-s-expression [text-pane]
-  (let [caret-pos (. text-pane getCaretPosition)
-        pos       (lexer/get-offset-child-s-expression (. text-pane getDocument) caret-pos)]
-    (. text-pane setCaretPosition pos)))
 
 
 
