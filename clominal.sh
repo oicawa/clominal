@@ -14,7 +14,8 @@ ${CFG_PATH}:\
 ${SRC_PATH}:\
 ${CLS_PATH}:\
 ${LIB_PATH}/clojure-1.4.0.jar:\
-${LIB_PATH}/clojure-contrib-1.2.0.jar \
+${LIB_PATH}/clojure-contrib-1.2.0.jar:\
+${LIB_PATH}/rsyntaxtextarea-2.0.6.jar \
 clojure.main -i ${SRC_PATH}/clominal/core.clj
 
 echo "Finished..."

@@ -54,7 +54,7 @@
       (if (< idx 0)
           ans
           (let [tab (. tabs getComponentAt idx)]
-            (if (. tab getModified)
+            (if (. tab isDirty)
                 (recur (- idx 1) (cons tab ans))
                 (recur (- idx 1) ans)))))))
 

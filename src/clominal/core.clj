@@ -5,6 +5,12 @@
   (:require [clominal.frame :as frame])
   (:import (javax.swing SwingUtilities)))
 
+(defn debug-print
+  [x]
+  `(let [res# ~x]
+     (println "?=" res#)
+     res#))
+
 (defn main [& args]
   (SwingUtilities/invokeLater
     #(let [max  (count args)

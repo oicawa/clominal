@@ -5,7 +5,8 @@
            (java.awt.im InputMethodRequests)
            (java.beans PropertyChangeListener)
            (java.util HashMap)
-           (javax.swing JList InputMap ActionMap JComponent JTextPane JEditorPane JTextArea JScrollPane Action
+           (javax.swing JList InputMap ActionMap JComponent Action
+                        ; JTextPane JScrollPane
                         JLabel JTextField JPanel JOptionPane SwingConstants JFileChooser
                         SwingUtilities AbstractAction JColorChooser)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
@@ -14,7 +15,10 @@
                              DefaultStyledDocument StyleContext)
            (javax.swing.undo UndoManager)
            (java.io File FileInputStream FileWriter FileNotFoundException StringReader)
-           (clojure.lang LineNumberingPushbackReader LispReader))
+           (clojure.lang LineNumberingPushbackReader LispReader)
+           (org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants TextEditorPane FileLocation Token RSyntaxUtilities)
+           (org.fife.ui.rtextarea RTextScrollPane)
+           )
   (:require [clominal.keys :as keys])
   (:require [clominal.editors.lexer :as lexer])
   (:require [clojure.contrib.string :as string])
@@ -35,7 +39,10 @@
 ;
 ; Key Maps
 ;
-(def maps (keys/make-keymaps (JTextPane.) JComponent/WHEN_FOCUSED))
+;(def maps (keys/make-keymaps (JTextPane.) JComponent/WHEN_FOCUSED))
+;(def maps (keys/make-keymaps (RSyntaxTextArea.) JComponent/WHEN_FOCUSED))
+(def maps (keys/make-keymaps (TextEditorPane.) JComponent/WHEN_FOCUSED))
+
 
 ;
 ; Font utilities
@@ -82,12 +89,6 @@
   (documentChanged [] ))
 
 (definterface ITextPane
-  (getPath [])
-  (setPath [target])
-  (getModified [])
-  (setModified [modified?])
-  (save [])
-  (saveAs [])
   (getStatusBar [])
   (getTabs [])
   (getRoot [])
@@ -97,182 +98,10 @@
   (setMark [position]))
 
 (definterface ITextEditor
-  (getModified [])
+  (isDirty [])
   (getTextPane [])
   (getScroll [])
-  (getPath []))
-
-;
-; Text Line Number
-;
-(defn make-text-line-number
-  [text-component input-minimumDisplayDigits]
-  (let [LEFT                  0.0
-        CENTER                0.5
-        RIGHT                 1.0
-        OUTER                 (MatteBorder. 0 0 0 2 Color/GRAY)
-        HEIGHT                (- Integer/MAX_VALUE 1000000)
-        ; Properties that can be changed
-        updateFont            (atom nil)
-        borderGap             (atom nil)
-        currentLineForeground (atom nil)
-        digitAlignment        (atom nil)
-        minimumDisplayDigits  (atom input-minimumDisplayDigits)
-        ; Keep history information to reduce the number of times the component needs to be repainted
-        lastDigits            (atom nil)
-        lastHeight            (atom nil)
-        lastLine              (atom nil)
-        fonts                 (HashMap.)
-        text-line-number      (proxy [JPanel ITextLineNumber CaretListener DocumentListener PropertyChangeListener] []
-                                (getUpdateFont [] @updateFont)
-                                (setUpdateFont [value] (dosync (reset! updateFont value)))
-                                (getBorderGap [] @borderGap)
-                                (setBorderGap [value]
-                                  (let [inner (EmptyBorder. 0 value 0 value)]
-                                    (dosync
-                                      (reset! borderGap value)
-                                      (reset! lastDigits 0))
-                                    (doto this
-                                      (.setBorder (CompoundBorder. OUTER inner))
-                                      (.setPreferredWidth))))
-                                (getCurrentLineForeground  []
-                                  (if (= nil @currentLineForeground)
-                                      (. this getForeground)
-                                      @currentLineForeground))
-                                (setCurrentLineForeground [value] (dosync (reset! currentLineForeground value)))
-                                (getDigitAlignment [] @digitAlignment)
-                                (setDigitAlignment [value]
-                                  (let [calc-value (cond (< 1.0 value) 1.0
-                                                         (< value 0.0) -1.0
-                                                         :else         value)]
-                                    (dosync (reset! digitAlignment calc-value))))
-                                (getMinimumDisplayDigits [] @minimumDisplayDigits)
-                                (setMinimumDisplayDigits [value]
-                                  (dosync (reset! minimumDisplayDigits value))
-                                  (. this setPreferredWidth))
-                                (setPreferredWidth []
-                                  (let [root   (.. text-component getDocument getDefaultRootElement)
-                                        lines  (. root getElementCount)
-                                        digits (Math/max (. (String/valueOf lines) length) @minimumDisplayDigits)]
-                                    (if (not (= @lastDigits digits))
-                                        (let [fontMetrics    (. this getFontMetrics (. this getFont))
-                                              width          (* (.. fontMetrics (charWidth \0)) digits)
-                                              insets         (. this getInsets)
-                                              preferredWidth (+ (. insets left) (. insets right) width)
-                                              dimension      (. this getPreferredSize)]
-                                          (. dimension setSize preferredWidth HEIGHT)
-                                          (. this setPreferredSize dimension)
-                                          (. this setSize dimension)
-                                          (dosync (reset! lastDigits digits))))))
-                                (paintComponent [graphics]
-                                  (proxy-super paintComponent graphics)
-                                  (let [font           (. text-component getFont)
-                                        fontMetrics    (. text-component getFontMetrics font)
-                                        insets         (. this getInsets)
-                                        availableWidth (- (.. this getSize width) (. insets left) (. insets right))
-                                        clip           (. graphics getClipBounds)
-                                        rowStartOffset (. text-component viewToModel (Point. 0 (. clip y)))
-                                        endOffset      (. text-component viewToModel (Point. 0 (+ (. clip y) (. clip height))))]
-                                    (loop [startOffset rowStartOffset]
-                                      (if (< endOffset startOffset)
-                                          nil
-                                         (do
-                                           (. graphics setColor (if (. this isCurrentLine startOffset)
-                                                                    (. this getCurrentLineForeground)
-                                                                    (. this getForeground)))
-                                           (let [lineNumber  (. this getTextLineNumber startOffset)
-                                                 stringWidth (.. fontMetrics (stringWidth lineNumber))
-                                                 x           (+ (. this getOffsetX availableWidth stringWidth) (. insets left))
-                                                 y           (. this getOffsetY startOffset fontMetrics)]
-                                             (. graphics drawString lineNumber (. x intValue) (. y intValue))
-                                             )
-                                           (recur (+ 1 (Utilities/getRowEnd text-component startOffset))))))))
-                                (isCurrentLine [rowStartOffset]
-                                  (let [caretPosition (. text-component getCaretPosition)
-                                        root          (.. text-component getDocument getDefaultRootElement)
-                                        offset-index  (. root getElementIndex rowStartOffset)
-                                        caret-index   (. root getElementIndex caretPosition)]
-                                    (= offset-index caret-index)))
-                                (getTextLineNumber [rowStartOffset]
-                                  (let [root  (.. text-component getDocument getDefaultRootElement)
-                                        index (. root getElementIndex rowStartOffset)
-                                        line  (. root getElement index)]
-                                    (if (= (. line getStartOffset) rowStartOffset)
-                                        (String/valueOf (+ 1 index))
-                                        "")))
-                                (getOffsetX [availableWidth stringWidth]
-                                  (* (- availableWidth stringWidth) @digitAlignment))
-                                (getOffsetY [rowStartOffset fontMetrics]
-                                  (let [r          (. text-component modelToView rowStartOffset)
-                                        lineHeight (. fontMetrics getHeight)
-                                        y          (+ (. r y) (. r height))
-                                        descent    0]
-                                    (if (= (. r height) lineHeight)
-                                        (- y (. fontMetrics getDescent))
-                                        (let [root  (.. text-component getDocument getDefaultRootElement)
-                                              index (. root getElementIndex rowStartOffset)
-                                              line  (. root getElement index)]
-                                          (loop [i       0
-                                                 discent 0]
-                                            (if (<= (. line getElementCount) i)
-                                                (- y discent)
-                                                (let [child      (. line getElement i)
-                                                      attributes (. child getAttributes)
-                                                      fontFamily (. attributes getAttribute StyleConstants/FontFamily)
-                                                      fontSize   (. attributes getAttribute StyleConstants/FontSize)
-                                                      key        (str fontFamily fontSize)
-                                                      fm         (let [fm1 (. fonts get key)]
-                                                                    (if (= nil fm1)
-                                                                        (let [font (Font. fontFamily Font/PLAIN fontSize)
-                                                                              fm2  (. text-component getFontMetrics font)]
-                                                                          (. fonts put key fm2)
-                                                                          fm2)
-                                                                        fm1))]
-                                                  (recur (+ 1 i) (Math/max descent (. fm getDescent))))))))))
-                                (caretUpdate [evt]
-                                  (let [caretPosition (. text-component getCaretPosition)
-                                        root          (.. text-component getDocument getDefaultRootElement)
-                                        currentLine   (. root getElementIndex caretPosition)]
-                                    (if (not (= @lastLine currentLine))
-                                        (do
-                                          (. this repaint)
-                                          (dosync (reset! lastLine currentLine))))))
-                                (changedUpdate [evt] (. this documentChanged))
-                                (insertUpdate [evt] (. this documentChanged))
-                                (removeUpdate [evt] (. this documentChanged))
-                                (documentChanged []
-                                  (SwingUtilities/invokeLater
-                                    (fn []
-                                      (let [preferredHeight (.. text-component getPreferredSize height)]
-                                        (if (not (= @lastHeight preferredHeight))
-                                            (do
-                                              (doto this
-                                                (.setPreferredWidth)
-                                                (.repaint))
-                                              (dosync (reset! lastHeight preferredHeight))))))))
-                                (propertyChange [evt]
-                                  (if (instance? Font (. evt getNewValue))
-                                      (if (= nil @updateFont)
-                                          (let [newFont (. evt getNewValue)]
-                                            (dosync (reset! lastDigits 0))
-                                            (doto this
-                                              (.setFont newFont)
-                                              (.setPreferredWidth)))
-                                          (. this repaint)))))
-         ]
-    (doto text-line-number
-      (.setFont (. text-component getFont))
-      (.setBorderGap 5)
-      (.setCurrentLineForeground Color/RED)
-      (.setDigitAlignment RIGHT)
-      (.setMinimumDisplayDigits @minimumDisplayDigits))
-
-    (.. text-component getDocument (addDocumentListener text-line-number))
-    (.. text-component (addCaretListener text-line-number))
-    (.. text-component (addPropertyChangeListener "font" text-line-number))
-
-    text-line-number))
-
+  (getFileFullPath []))
 
 ;
 ; Improved InputMethodRequests.
@@ -317,46 +146,17 @@
         ;
         ; Text Editor
         ;
-        file-path    (atom nil)
         improved-imr (atom nil)
-        modified     (atom false)
         ime-mode     (atom nil)
         um           (UndoManager.)
         is-marked    (atom false)
-        text-pane    (proxy [JTextPane ITextPane clominal.keys.IKeybindComponent] []
-                       (getPath []
-                         @file-path)
-                       (setPath [path]
-                         (let [full-path (get-absolute-path path)]
-                           (dosync (reset! file-path full-path))))
-                       (getModified [] @modified)   
-                       (setModified [modified?]
-                         (reset! modified modified?)
-                         (if (= nil @file-path)
-                             new-title
-                             (let [title (. (File. @file-path) getName)
-                                   root  (.. this getRoot)
-                                   index (. tabs indexOfComponent root)]
-                               (. tabs setTitleAt index (str title (if modified? " *" ""))))))
-                       (save
-                         []
-                         (try
-                           (with-open [stream (FileWriter. (. this getPath))]
-                             (doto this
-                               (.write stream)
-                               (.setModified false)))
-                           (catch Exception e
-                             (. e printStackTrace)
-                             (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION)))))
-                       (saveAs
-                         []
-                         (let [chooser (JFileChooser. (str "~" os-file-separator))
-                               result  (. chooser showSaveDialog nil)]
-                           (if (= JFileChooser/APPROVE_OPTION result)
-                               (doto this
-                                 (.setPath (.. chooser getSelectedFile getAbsolutePath))
-                                 (.save)
-                                 (.setModified false)))))
+        text-pane    (proxy [TextEditorPane ITextPane clominal.keys.IKeybindComponent] []
+                       (setDirty [dirty?]
+                         (proxy-super setDirty dirty?)
+                         (let [title (if (. this isLocalAndExists) (. this getFileName) new-title)
+                               root  (.. this getRoot)
+                               index (. tabs indexOfComponent root)]
+                           (. tabs setTitleAt index (str title (if dirty? " *" "")))))
                        (getInputMethodRequests []
                          (if (= nil @improved-imr)
                              (let [original-imr (proxy-super getInputMethodRequests)]
@@ -389,33 +189,26 @@
                        (getTabIndex []
                          (let [tabs (. this getTabs)
                                root (. this getRoot)]
-                           (.. tabs indexOfComponent root)))
+                           (. tabs indexOfComponent root)))
                        (getUndoManager []
                          um)
                        (isMark [] @is-marked)
                        (setMark [marked]
                          (reset! is-marked marked)))
-
-        scroll       (JScrollPane. text-pane
-                                   JScrollPane/VERTICAL_SCROLLBAR_ALWAYS
-                                   JScrollPane/HORIZONTAL_SCROLLBAR_ALWAYS)
+        scroll       (RTextScrollPane. text-pane)
         ;
         ; Root Panel
         ;
         root-panel   (proxy [JPanel ITextEditor] []
                        (getTextPane []
                          text-pane)
-                       (getModified []
-                         (. text-pane getModified))
+                       (isDirty []
+                         (. text-pane isDirty))
                        (requestFocusInWindow []
                          (. text-pane requestFocusInWindow))
                        (getScroll [] scroll)
-                       (getPath [] @file-path))
-                ;
-        ; Line Numbers
-        ;
-        text-line-number (make-text-line-number text-pane 3)
-        
+                       (getFileFullPath []
+                         (. text-pane getFileFullPath)))
         ;
         ; Others
         ;
@@ -432,20 +225,17 @@
       (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
       (.setActionMap (. default-map getActionMap))
       (.enableInputMethods true)
+      (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_NONE)
+      (.setPaintTabLines true)
       )
 
     (doto (. text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
                               (changedUpdate [evt] )
-                              (insertUpdate [evt] (. text-pane setModified true))
-                              (removeUpdate [evt] (. text-pane setModified true))))
+                              (insertUpdate [evt] (. text-pane setDirty true))
+                              (removeUpdate [evt] (. text-pane setDirty true))))
       (.addUndoableEditListener um))
 
-
-    ;
-    ; Scroll Pane
-    ;
-    (. scroll setRowHeaderView text-line-number)
 
     ;
     ; StatusBar
@@ -564,22 +354,13 @@
 (defaction previous-page [text-pane evt]
   (if (. text-pane isMark)
       (do
-        (println "Next page with selecting action has *NOT Implemented*.")
-        )
-      ; (let [caret-position (. text-component getCaretPosition)
-      ;       root           (.. text-component getDocument getDefaultRootElement)
-      ;       offset         (. root getStartOffset)
-      ;       offset-index   (. root getElementIndex rowStartOffset)
-      ;       caret-index    (. root getElementIndex caretPosition)]
-
-      ;   )
+        (println "Next page with selecting action has *NOT Implemented*."))
       (. (get-default-editor-action DefaultEditorKit/pageUpAction) actionPerformed evt)))
 
 (defaction next-page [text-pane evt]
   (if (. text-pane isMark)
       (do
-        (println "Next page with selecting action has *NOT Implemented*.")
-        )
+        (println "Next page with selecting action has *NOT Implemented*."))
       (. (get-default-editor-action DefaultEditorKit/pageDownAction) actionPerformed evt)))
 
 ;; Document
@@ -699,7 +480,7 @@
 (defn apply-editor-mode
   [text-pane]
   (println "apply-editor-mode")
-  (let [ext                  (get-extension (. text-pane getPath))
+  (let [ext                  (get-extension (. text-pane getFileFullPath))
         namespace-name       (format "mode.%s_mode" ext)
         get-mode-name-symbol (symbol namespace-name "get-mode-name")
         ]
@@ -712,6 +493,19 @@
 ;; File action group.
 ;;
 
+(defn save-document
+  [text-pane]
+  (. text-pane save))
+
+(defn save-as-document
+  [text-pane]
+  (let [chooser (JFileChooser. (str "~" os-file-separator))
+        result  (. chooser showSaveDialog nil)]
+    (if (= JFileChooser/APPROVE_OPTION result)
+        (doto text-pane
+          (.saveAs (FileLocation/create (.. chooser getSelectedFile getAbsolutePath)))
+          (.setDirty false)))))
+
 (defn file-set
   [tabs file]
   (. tabs addTab nil (make-editor tabs))
@@ -721,28 +515,19 @@
     (. editor requestFocusInWindow)
     (if (= nil file)
         (. tabs setTitleAt idx new-title)
-        (let [file-path (. file getAbsolutePath)
-              text-pane (. editor getTextPane)]
-          (. text-pane setPath file-path)
-          (try
-            (with-open [stream (FileInputStream. file-path)]
-              (let [document (. text-pane getDocument)]
-                (doto text-pane
-                  (.read stream document)
-                  (.setModified false)))
-              (doto (. text-pane getDocument)
-                (.addDocumentListener (proxy [DocumentListener] []
-                                        (changedUpdate [evt] )
-                                        (insertUpdate [evt] (. text-pane setModified true))
-                                        (removeUpdate [evt] (. text-pane setModified true))))
-                (.addUndoableEditListener (. text-pane getUndoManager)))
-              (apply-editor-mode text-pane)
-              (println "Mode loading has completed.")
-              )
-            (catch FileNotFoundException _ true)
-            (catch Exception e
-              (. e printStackTrace)
-              (. JOptionPane (showMessageDialog nil (. e getMessage) "Error..." JOptionPane/OK_OPTION))))))))
+        (let [file-location (FileLocation/create (. file getAbsolutePath))
+              text-pane     (. editor getTextPane)
+              index         (. text-pane getTabIndex)
+              file-name     (. file-location getFileName)]
+          (. text-pane load file-location nil)
+          (.. text-pane getTabs (setTitleAt index file-name))
+          (doto (. text-pane getDocument)
+            (.addDocumentListener (proxy [DocumentListener] []
+                                    (changedUpdate [evt] )
+                                    (insertUpdate [evt] (. text-pane setDirty true))
+                                    (removeUpdate [evt] (. text-pane setDirty true))))
+            (.addUndoableEditListener (. text-pane getUndoManager)))
+          (apply-editor-mode text-pane)))))
       
 (defaction file-new
   [tabs]
@@ -751,7 +536,7 @@
 (defaction file-open
   [tabs]
   (let [panel   (. tabs getCurrentPanel)
-        path    (if (= nil panel) home-directory-path (. panel getPath))
+        path    (if (= nil panel) home-directory-path (. panel getFileFullPath))
         chooser (JFileChooser. path)
         result  (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)
@@ -759,21 +544,21 @@
 
 (defaction file-save
   [text-pane]
-  (if (= nil (. text-pane getPath))
+  (if (. text-pane isLocalAndExists)
+      (save-document text-pane)
       (do
-        (. text-pane saveAs)
-        (apply-editor-mode text-pane))
-      (. text-pane save)))
+        (save-as-document text-pane)
+        (apply-editor-mode text-pane))))
 
 (defaction close
   [text-pane]
-  (if (. text-pane getModified)
+  (if (. text-pane isDirty)
       (let [option (JOptionPane/showConfirmDialog (. text-pane getTabs)
                                                   "This document is modified.\nDo you save?")]
         (cond (= option JOptionPane/YES_OPTION) (do 
-                                                  (if (= nil (. text-pane getPath))
-                                                      (. text-pane saveAs)
-                                                      (. text-pane save))
+                                                  (if (= nil (. text-pane getFileFullPath))
+                                                      (save-as-document text-pane)
+                                                      (save-document text-pane))
                                                   (.. text-pane getTabs (remove (. text-pane getRoot))))
               (= option JOptionPane/NO_OPTION)  (.. text-pane getTabs (remove (. text-pane getRoot)))
               :else                             nil))
@@ -803,11 +588,6 @@
             (println "row:%d, emit:%s, row:%s" row (. r canEmit))
             (recur (LispReader/read pushback-reader false nil true)))))))
 
-
-          
-
-
-
 (defaction set-paragraph-attribute [text-pane]
   (let [start (. text-pane getSelectionStart)
         end   (. text-pane getSelectionEnd)]
@@ -830,5 +610,40 @@
           (. doc insertString pos val style)))))
 
 
+(defn get-token
+  [text-pane offset]
+  (let [doc          (. text-pane getDocument)
+        map          (. doc getDefaultRootElement)
+        line-index   (. map getElementIndex offset)
+        ; line-element (. map getElement line-index)
+        ; init-start   (. line-element getStartOffset)
+        ; init-end     (. line-element getEndOffset)
+        token-list   (. doc getTokenListForLine line-index)]
+    (RSyntaxUtilities/getTokenAtOffset token-list offset)))
 
+; (defn get-token
+;   [text-pane offset]
+;   (let [line (. text-pane getLineOfOffset offset)]
+;     (loop [token  (. text-pane getTokenListForLine line)]
+;       (cond (= nil token)
+;               nil
+;             (. token containsPosition offset)
+;               token
+;             :else
+;               (recur (. token getNextToken))))))
+
+(defaction print-current-line-tokens [text-pane]
+  (let [offset (. text-pane getCaretPosition)
+        line   (. text-pane getLineOfOffset offset)]
+    (println "--- line:" line "---")
+    (loop [token  (. text-pane getTokenListForLine line)]
+      (if (= nil token)
+          nil
+          (do
+            (println "Token:" token)
+            (recur (. token getNextToken)))))))
+
+(defaction print-current-caret-token [text-pane]
+  (let [token (get-token text-pane (. text-pane getCaretPosition))]
+    (println "Caret Token:" token)))
 
