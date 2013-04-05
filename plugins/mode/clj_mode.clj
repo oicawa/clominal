@@ -284,29 +284,18 @@
   (println "[clojure-mode] Loading ...")
   ; keybinds
   (let [settings {
-                   '(Ctrl Alt \h) backward-s-expression
-                   '(Ctrl Alt \j) downward-s-expression
-                   '(Ctrl Alt \k) upward-s-expression
-                   '(Ctrl Alt \l) forward-s-expression
-                  ; '(Ctrl Alt \h) backward-next-token
-                  ; '(Ctrl Alt \l) forward-next-token
-                  ; '(Ctrl Alt \h) backward-proper-token
-                  ; '(Ctrl Alt \l) forward-proper-token
-                  
-                  '(Ctrl Alt \i) print-current-token-info
-                  ;'(Ctrl Alt \j) child-s-expression
-                  ;'(Ctrl Alt \k) parent-s-expression
-                  ;'(Ctrl Alt \l) forward-s-expression
-                  ;'(Ctrl \t) tokenize
+                   '(Ctrl Alt h) backward-s-expression
+                   '(Ctrl Alt j) downward-s-expression
+                   '(Ctrl Alt k) upward-s-expression
+                   '(Ctrl Alt l) forward-s-expression
+                   '(Ctrl Alt i) print-current-token-info
                  }]
     (doseq [setting settings]
       (let [keybind (setting 0)
             action  (setting 1)]
         (keys/define-keybind editor/maps keybind action))))
   (doto text-pane
-    (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_CLOJURE)
-    )
-  
+    (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_CLOJURE))
   (println "[clojure-mode] Loading completed."))
 
 

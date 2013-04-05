@@ -39,8 +39,6 @@
 ;
 ; Key Maps
 ;
-;(def maps (keys/make-keymaps (JTextPane.) JComponent/WHEN_FOCUSED))
-;(def maps (keys/make-keymaps (RSyntaxTextArea.) JComponent/WHEN_FOCUSED))
 (def maps (keys/make-keymaps (TextEditorPane.) JComponent/WHEN_FOCUSED))
 
 
@@ -480,14 +478,13 @@
 (defn apply-editor-mode
   [text-pane]
   (println "apply-editor-mode")
-  (let [ext                  (get-extension (. text-pane getFileFullPath))
-        namespace-name       (format "mode.%s_mode" ext)
-        get-mode-name-symbol (symbol namespace-name "get-mode-name")
+  (let [ext                   (get-extension (. text-pane getFileFullPath))
+        namespace-name        (format "mode.%s_mode" ext)
+        get-mode-name-symbol  (symbol namespace-name "get-mode-name")
+        init-mode-name-symbol (symbol namespace-name "init-mode")
         ]
     (require (symbol namespace-name))
-    (apply (find-var 'mode.clj_mode/init-mode) [text-pane])
-    ;(println (all-ns))
-    ))
+    (apply (find-var init-mode-name-symbol) [text-pane])))
 
 ;;
 ;; File action group.
