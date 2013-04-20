@@ -3,6 +3,7 @@
 
 (ns clominal.core
   (:require [clominal.frame :as frame])
+  (:use     [clominal.utils])
   (:import (javax.swing SwingUtilities)))
 
 (defn debug-print
@@ -15,6 +16,7 @@
   (SwingUtilities/invokeLater
     #(let [max  (count args)
            mode (if (= 0 max) nil ((vec args) 0))]
-       (. (frame/make-frame mode) setVisible true))))
+       (reset! *frame* (frame/make-frame mode))
+       (. @*frame* setVisible true))))
 
 (main "d")

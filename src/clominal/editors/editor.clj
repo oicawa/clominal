@@ -1,4 +1,7 @@
 (ns clominal.editors.editor
+  (:use [clominal.utils])
+  (:require [clominal.keys :as keys]
+            [clojure.contrib.string :as string])
   (:import (java.lang Thread)
            (java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
            (java.awt.event ActionEvent)
@@ -7,7 +10,7 @@
            (java.util HashMap)
            (javax.swing JList InputMap ActionMap JComponent Action
                         ; JTextPane JScrollPane
-                        JLabel JTextField JPanel JOptionPane SwingConstants JFileChooser
+                        JLabel JTextField JPanel JCheckBox JOptionPane SwingConstants JFileChooser
                         SwingUtilities AbstractAction JColorChooser)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
            (javax.swing.event CaretListener DocumentListener)
@@ -18,11 +21,7 @@
            (clojure.lang LineNumberingPushbackReader LispReader)
            (org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants TextEditorPane FileLocation Token RSyntaxUtilities)
            (org.fife.ui.rtextarea RTextScrollPane)
-           )
-  (:require [clominal.keys :as keys])
-  (:require [clominal.editors.lexer :as lexer])
-  (:require [clojure.contrib.string :as string])
-  (:use [clominal.utils]))
+           (clominal.utils IMarkable IAppPane)))
 
 
 ;;------------------------------
@@ -42,20 +41,6 @@
 (def maps (keys/make-keymaps (TextEditorPane.) JComponent/WHEN_FOCUSED))
 
 
-;
-; Font utilities
-;
-(defn get-font-names
-  []
-  (.. GraphicsEnvironment getLocalGraphicsEnvironment getAvailableFontFamilyNames))
-
-(defn set-font
-  [component parameters]
-  (let [name (parameters 0)
-        type (parameters 1)
-        size (parameters 2)]
-    (. component setFont (Font. name type size))))
-
 (defn printSize
   [component name]
   (let [psize  (. component getPreferredSize)
@@ -72,34 +57,16 @@
 ;;
 ;;------------------------------
 
-;; Interfaces
-(definterface ITextLineNumber
-  (setBorderGap [value])
-  (setPreferredWidth [])
-  (setCurrentLineForeground [value])
-  (setDigitAlignment [value])
-  (setMinimumDisplayDigits [value])
-  (isCurrentLine [rowStartOffset])
-  (getCurrentLineForeground [])
-  (getTextLineNumber [rowStartOffset])
-  (getOffsetX [availableWidth stringWidth])
-  (getOffsetY [rowStartOffset fontMetrics])
-  (documentChanged [] ))
+; Interfaces
 
-(definterface ITextPane
+(definterface ITextEditorPane
+  (load [file])
+  (setFocus [])
   (getStatusBar [])
-  (getTabs [])
-  (getRoot [])
-  (getTabIndex [])
   (getUndoManager [])
-  (isMark [])
-  (setMark [position]))
-
-(definterface ITextEditor
-  (isDirty [])
-  (getTextPane [])
-  (getScroll [])
-  (getFileFullPath []))
+  (getSubPanel [])
+  (getFileFullPath [])
+  )
 
 ;
 ; Improved InputMethodRequests.
@@ -128,6 +95,30 @@
         (. rect setLocation (- (. rect x) 10) (- (. rect y) 45))
         rect))))
 
+(defn get-extension
+  [file-path]
+  (let [index (. file-path lastIndexOf ".")]
+    (if (< 0 index)
+        (. file-path substring (+ index 1))
+        "")))
+
+(defn get-mode-package
+  [ext]
+  (let [s (symbol "mode" (format "%s-mode" ext))]
+    (println "mode-name:" s)
+    (require s)))
+
+(defn apply-editor-mode
+  [text-pane]
+  (println "apply-editor-mode")
+  (let [ext                   (get-extension (. text-pane getFileFullPath))
+        namespace-name        (format "mode.%s_mode" ext)
+        get-mode-name-symbol  (symbol namespace-name "get-mode-name")
+        init-mode-name-symbol (symbol namespace-name "init-mode")
+        ]
+    (require (symbol namespace-name))
+    (apply (find-var init-mode-name-symbol) [text-pane])))
+
 ;
 ; Text Editor
 ;
@@ -148,13 +139,13 @@
         ime-mode     (atom nil)
         um           (UndoManager.)
         is-marked    (atom false)
-        text-pane    (proxy [TextEditorPane ITextPane clominal.keys.IKeybindComponent] []
+        text-pane    (proxy [TextEditorPane IMarkable clominal.keys.IKeybindComponent] []
                        (setDirty [dirty?]
                          (proxy-super setDirty dirty?)
-                         (let [title (if (. this isLocalAndExists) (. this getFileName) new-title)
-                               root  (.. this getRoot)
-                               index (. tabs indexOfComponent root)]
-                           (. tabs setTitleAt index (str title (if dirty? " *" "")))))
+                         (let [index    (. tabs getSelectedIndex)
+                               filename (if (. this isLocalAndExists) (. this getFileName) new-title)
+                               title    (str filename (if dirty? " *" ""))]
+                           (. tabs setTitleAt index title)))
                        (getInputMethodRequests []
                          (if (= nil @improved-imr)
                              (let [original-imr (proxy-super getInputMethodRequests)]
@@ -181,30 +172,34 @@
                                (. keystrokes setText (if (= current "")
                                                          (keys/str-keystroke keystroke)
                                                          (str current ", " (keys/str-keystroke keystroke)))))))
-                       (getTabs [] tabs)
-                       (getRoot []
-                         (.. this getParent getParent getParent))
-                       (getTabIndex []
-                         (let [tabs (. this getTabs)
-                               root (. this getRoot)]
-                           (. tabs indexOfComponent root)))
-                       (getUndoManager []
-                         um)
                        (isMark [] @is-marked)
                        (setMark [marked]
                          (reset! is-marked marked)))
         scroll       (RTextScrollPane. text-pane)
+        sub-panel    (JPanel. (GridBagLayout.))
         ;
         ; Root Panel
         ;
-        root-panel   (proxy [JPanel ITextEditor] []
-                       (getTextPane []
-                         text-pane)
-                       (isDirty []
-                         (. text-pane isDirty))
-                       (requestFocusInWindow []
+        root-panel   (proxy [JPanel IAppPane ITextEditorPane] []
+                       (canClose [] (not (. text-pane isDirty)))
+                       (getTabs [] tabs)
+                       (getTabIndex [] (. tabs indexOfComponent this))
+                       (load [file]
+                         (. tabs addTab nil this)
+                         (let [index (. this getTabIndex)]
+                           (if (nil? file)
+                               (. tabs setTitleAt index new-title)
+                               (let [file-location (FileLocation/create (. file getAbsolutePath))
+                                     file-name     (. file-location getFileName)]
+                                 (. text-pane load file-location nil)
+                                 (. tabs setTitleAt index file-name)
+                                 (apply-editor-mode text-pane)))))
+                       (setFocus []
+                         (. tabs setSelectedIndex (. this getTabIndex))
                          (. text-pane requestFocusInWindow))
-                       (getScroll [] scroll)
+                       (getStatusBar [] statusbar)
+                       (getUndoManager [] um)
+                       (getSubPanel [] sub-panel)
                        (getFileFullPath []
                          (. text-pane getFileFullPath)))
         ;
@@ -224,16 +219,23 @@
       (.setActionMap (. default-map getActionMap))
       (.enableInputMethods true)
       (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_NONE)
-      (.setPaintTabLines true)
-      )
+      (.setPaintTabLines true))
 
     (doto (. text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
                               (changedUpdate [evt] )
-                              (insertUpdate [evt] (. text-pane setDirty true))
-                              (removeUpdate [evt] (. text-pane setDirty true))))
+                              (insertUpdate [evt]
+                                (. text-pane setDirty true))
+                              (removeUpdate [evt]
+                                (. text-pane setDirty true))))
       (.addUndoableEditListener um))
 
+    ;
+    ; Sub Panel
+    ;
+    (doto sub-panel
+      (.setBorder (LineBorder. Color/GRAY))
+      (.setVisible false))
 
     ;
     ; StatusBar
@@ -243,14 +245,15 @@
       (.setPreferredSize nil)
       (.setLayout (GridBagLayout.))
       (grid-bag-layout
-        :gridx 0, :gridy 0
+        :gridy 0
+        :gridx 0
         :anchor :WEST
         keystrokes
-        :gridx 1, :gridy 0
+        :gridx 1
         :fill :HORIZONTAL
         :weightx 1.0
         filler
-        :gridx 2, :gridy 0
+        :gridx 2
         :weightx 0.0
         char-code
         ))
@@ -272,6 +275,11 @@
         :weightx 1.0
         :weighty 0.0
         :gridy 1
+        sub-panel
+        :fill :HORIZONTAL
+        :weightx 1.0
+        :weighty 0.0
+        :gridy 2
         statusbar))
     (doseq [component [text-pane keystrokes char-code]]
       (set-font component (default-fonts (get-os-keyword))))
@@ -303,24 +311,24 @@
         root        (.. text-pane getDocument getDefaultRootElement)]
     (. root getElementIndex current-pos)))
 
-(defmacro defaction-with-default
-  [name bindings & body]
-  (assert (vector? bindings))
-  (let [cnt (count bindings)]
-    (assert (and (<= 1 cnt) (<= cnt 2)))
-    (let [source (bindings 0)]
-      (if (= cnt 1)
-          (let [evt (gensym "evt")]
-            `(def ~name (proxy [AbstractAction] []
-                          (actionPerformed [~evt]
-                            ((fn [~source] ~@body)
-                             (. ~evt getSource))))))
-          (let [evt (bindings 1)]
-            `(def ~name (proxy [AbstractAction] []
-                          (actionPerformed [~evt]
-                            ((fn [~source ~evt] ~@body)
-                             (. ~evt getSource)
-                             ~evt)))))))))
+; (defmacro defaction-with-default
+;   [name bindings & body]
+;   (assert (vector? bindings))
+;   (let [cnt (count bindings)]
+;     (assert (and (<= 1 cnt) (<= cnt 2)))
+;     (let [source (bindings 0)]
+;       (if (= cnt 1)
+;           (let [evt (gensym "evt")]
+;             `(def ~name (proxy [AbstractAction] []
+;                           (actionPerformed [~evt]
+;                             ((fn [~source] ~@body)
+;                              (. ~evt getSource))))))
+;           (let [evt (bindings 1)]
+;             `(def ~name (proxy [AbstractAction] []
+;                           (actionPerformed [~evt]
+;                             ((fn [~source ~evt] ~@body)
+;                              (. ~evt getSource)
+;                              ~evt)))))))))
 
 ;;
 ;; Caret move action group.
@@ -462,29 +470,6 @@
   (. text-pane setMark false))
 
 
-(defn get-extension
-  [file-path]
-  (let [index (. file-path lastIndexOf ".")]
-    (if (< 0 index)
-        (. file-path substring (+ index 1))
-        "")))
-
-(defn get-mode-package
-  [ext]
-  (let [s (symbol "mode" (format "%s-mode" ext))]
-    (println "mode-name:" s)
-    (require s)))
-
-(defn apply-editor-mode
-  [text-pane]
-  (println "apply-editor-mode")
-  (let [ext                   (get-extension (. text-pane getFileFullPath))
-        namespace-name        (format "mode.%s_mode" ext)
-        get-mode-name-symbol  (symbol namespace-name "get-mode-name")
-        init-mode-name-symbol (symbol namespace-name "init-mode")
-        ]
-    (require (symbol namespace-name))
-    (apply (find-var init-mode-name-symbol) [text-pane])))
 
 ;;
 ;; File action group.
@@ -503,28 +488,33 @@
           (.saveAs (FileLocation/create (.. chooser getSelectedFile getAbsolutePath)))
           (.setDirty false)))))
 
+; (defn file-set
+;   [tabs file]
+;   (. tabs addTab nil (make-editor tabs))
+;   (let [idx    (- (. tabs getTabCount) 1)
+;         editor (. tabs getComponentAt idx)]
+;     (. tabs setSelectedIndex idx)
+;     (. editor requestFocusInWindow)
+;     (if (= nil file)
+;         (. tabs setTitleAt idx new-title)
+;         (let [file-location (FileLocation/create (. file getAbsolutePath))
+;               text-pane     (. editor getTextPane)
+;               index         (. text-pane getTabIndex)
+;               file-name     (. file-location getFileName)]
+;           (. text-pane load file-location nil)
+;           (.. text-pane getTabs (setTitleAt index file-name))
+;           (doto (. text-pane getDocument)
+;             (.addDocumentListener (proxy [DocumentListener] []
+;                                     (changedUpdate [evt] )
+;                                     (insertUpdate [evt] (. text-pane setDirty true))
+;                                     (removeUpdate [evt] (. text-pane setDirty true))))
+;             (.addUndoableEditListener (. text-pane getUndoManager)))
+;           (apply-editor-mode text-pane)))))
 (defn file-set
   [tabs file]
-  (. tabs addTab nil (make-editor tabs))
-  (let [idx    (- (. tabs getTabCount) 1)
-        editor (. tabs getComponentAt idx)]
-    (. tabs setSelectedIndex idx)
-    (. editor requestFocusInWindow)
-    (if (= nil file)
-        (. tabs setTitleAt idx new-title)
-        (let [file-location (FileLocation/create (. file getAbsolutePath))
-              text-pane     (. editor getTextPane)
-              index         (. text-pane getTabIndex)
-              file-name     (. file-location getFileName)]
-          (. text-pane load file-location nil)
-          (.. text-pane getTabs (setTitleAt index file-name))
-          (doto (. text-pane getDocument)
-            (.addDocumentListener (proxy [DocumentListener] []
-                                    (changedUpdate [evt] )
-                                    (insertUpdate [evt] (. text-pane setDirty true))
-                                    (removeUpdate [evt] (. text-pane setDirty true))))
-            (.addUndoableEditListener (. text-pane getUndoManager)))
-          (apply-editor-mode text-pane)))))
+  (doto (make-editor tabs)
+    (.load file)
+    (.setFocus)))
       
 (defaction file-new
   [tabs]
@@ -552,13 +542,16 @@
   (if (. text-pane isDirty)
       (let [option (JOptionPane/showConfirmDialog (. text-pane getTabs)
                                                   "This document is modified.\nDo you save?")]
-        (cond (= option JOptionPane/YES_OPTION) (do 
-                                                  (if (= nil (. text-pane getFileFullPath))
-                                                      (save-as-document text-pane)
-                                                      (save-document text-pane))
-                                                  (.. text-pane getTabs (remove (. text-pane getRoot))))
-              (= option JOptionPane/NO_OPTION)  (.. text-pane getTabs (remove (. text-pane getRoot)))
-              :else                             nil))
+        (cond (= option JOptionPane/YES_OPTION)
+                (do 
+                  (if (= nil (. text-pane getFileFullPath))
+                      (save-as-document text-pane)
+                      (save-document text-pane))
+                  (.. text-pane getTabs (remove (. text-pane getRoot))))
+              (= option JOptionPane/NO_OPTION)
+                (.. text-pane getTabs (remove (. text-pane getRoot)))
+              :else
+                nil))
       (.. text-pane getTabs (remove (. text-pane getRoot)))))
                 
       
@@ -644,3 +637,19 @@
   (let [token (get-token text-pane (. text-pane getCaretPosition))]
     (println "Caret Token:" token)))
 
+(defn show-sub-panel
+  [text-pane target-panel]
+  (let [root      (. text-pane getRoot)
+        sub-panel (. root getSubPanel)
+        hidden?   (not (. sub-panel isVisible))]
+    (doto sub-panel
+      (.removeAll)
+      (grid-bag-layout
+        :gridx 0 :gridy 0 :anchor :WEST :fill :HORIZONTAL :weightx 1.0
+        target-panel))
+    (if hidden?
+        (. sub-panel setVisible true))
+    (. target-panel setFocus)))
+
+(defaction show-component-stack [text-pane]
+  (get-frame text-pane))

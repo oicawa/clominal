@@ -2,7 +2,7 @@
   (:require [clominal.keys :as keys]
             [clominal.frame :as frame]
             [clominal.editors.editor :as editor]
-            [clominal.editors.lexer :as lexer]
+            [clominal.editors.search :as search]
             ))
 
 ;;------------------------------
@@ -42,6 +42,10 @@
    '(Ctrl p) editor/mark
    '(Ctrl e) editor/escape
    '(Ctrl g) editor/goto-line
+   '(Ctrl f) search/show-find
+   '(Ctrl r) search/show-replace
+   
+   '(Alt i) editor/show-component-stack
   })
 
 (doseq [setting editor-keybind-settings]

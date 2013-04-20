@@ -1,9 +1,58 @@
 (ns clominal.utils
   (:require [clojure.contrib.string :as string])
   (:import (java.io File)
+           (java.awt Font GraphicsEnvironment)
            (java.util HashMap)
            (java.util.regex Pattern)
            (javax.swing AbstractAction)))
+
+(def ^:dynamic *frame*   (atom nil))
+;(def ^:dynamic *console* (atom nil))
+
+(defn error
+  [e]
+  (. e printStackTrace)
+  (if-not (nil? @*frame*)
+          (. @*frame* showConsole)))
+
+; (defmulti error class)
+; (defmethod error ^Exception
+;   [e]
+;   (. e printStackTrace)
+;   (. clominal.core/*frame* showConsole))
+; (defmethod error ^String
+;   [message]
+;   (. System/err println message)
+;   (. clominal.core/*frame* showConsole))
+
+;;
+;; Common Interfaces
+;;
+
+(definterface ITabbedPane
+  (getCurrentPanel []))
+
+(definterface IMarkable
+  (isMark [])
+  (setMark [marked]))
+
+(definterface IAppPane
+  (canClose [])
+  (getTabs [])
+  (getTabIndex []))
+
+
+(defn add-component
+  [tabs title component]
+  (. tabs addTab title component)
+  (let [index         (- (. tabs getTabCount) 1)
+        ;tabcomponent (. tabs getComponentAt index)
+        ]
+    (. tabs setSelectedIndex index)
+    (. component requestFocusInWindow)
+    component))
+
+
 
 ;;------------------------------
 ;; The macro for using GridBagLayout/GridBagConstraint easy.
@@ -28,6 +77,7 @@
 ;   (JLabel. "住所")
 ;   :gridx 1, :gridy 4, :weightx 1.0, :fill :HORIZONTAL
 ;    address-label)
+
 
 
 
@@ -98,10 +148,32 @@
         (string/join os-file-separator (cons (System/getProperty "user.home") body))
         (. (File. path) getAbsolutePath))))
 
+;
+; Font utilities
+;
+(defn get-font-names
+  []
+  (.. GraphicsEnvironment getLocalGraphicsEnvironment getAvailableFontFamilyNames))
 
-;;
-;; Action macro
-;;
+(defn set-font
+  [component parameters]
+  (let [name (parameters 0)
+        type (parameters 1)
+        size (parameters 2)]
+    (. component setFont (Font. name type size))))
+
+
+(defn get-frame
+  [component]
+  (println "----------")
+  (loop [current component]
+    (println (type current))
+    (let [parent (. current getParent)]
+      (if (nil? parent)
+          current
+          (recur parent)))))
+
+
 (defmacro defaction
   [name bindings & body]
   (assert (vector? bindings))
@@ -109,14 +181,27 @@
     (assert (and (<= 1 cnt) (<= cnt 2)))
     (let [source (bindings 0)]
       (if (= cnt 1)
-          (let [evt (gensym "evt")]
+          (let [evt (gensym "evt")
+                e   (gensym "e")]
             `(def ~name (proxy [AbstractAction] []
                           (actionPerformed [~evt]
-                            ((fn [~source] ~@body)
-                             (. ~evt getSource))))))
-          (let [evt (bindings 1)]
+                            (try
+                              ((fn [~source] ~@body)
+                               (. ~evt getSource))
+                              (catch Exception ~e
+                                (. ~e printStackTrace)
+                                ;(. System/err println (. ~e getMessage))
+                                (error ~e)
+                                ))))))
+          (let [evt (bindings 1)
+                e   (gensym "e")]
             `(def ~name (proxy [AbstractAction] []
                           (actionPerformed [~evt]
-                            ((fn [~source ~evt] ~@body)
-                             (. ~evt getSource)
-                             ~evt)))))))))
+                            (try
+                              ((fn [~source ~evt] ~@body)
+                               (. ~evt getSource)
+                               ~evt)
+                              (catch Exception ~e
+                                ;(. ~e printStackTrace)
+                                (error ~e)
+                                ))))))))))
