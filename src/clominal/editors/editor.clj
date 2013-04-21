@@ -116,8 +116,11 @@
         get-mode-name-symbol  (symbol namespace-name "get-mode-name")
         init-mode-name-symbol (symbol namespace-name "init-mode")
         ]
-    (require (symbol namespace-name))
-    (apply (find-var init-mode-name-symbol) [text-pane])))
+    (if (try
+          (require (symbol namespace-name))
+          true
+          (catch FileNotFoundException _ false))
+        (apply (find-var init-mode-name-symbol) [text-pane]))))
 
 ;
 ; Text Editor
@@ -187,6 +190,7 @@
                        (load [file]
                          (. tabs addTab nil this)
                          (let [index (. this getTabIndex)]
+                           (. tabs setSelectedIndex index)
                            (if (nil? file)
                                (. tabs setTitleAt index new-title)
                                (let [file-location (FileLocation/create (. file getAbsolutePath))

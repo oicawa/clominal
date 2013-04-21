@@ -81,6 +81,7 @@
       (.setName "console")
       (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
       (.setActionMap (. default-map getActionMap))
+      (.setToSystemOut)
       (.setToSystemErr)
       ;(.setEditable false)
       (.setEditable true))

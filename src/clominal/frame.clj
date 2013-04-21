@@ -133,7 +133,6 @@
                                                           (getTabs [] tabs)
                                                           (getTabIndex []
                                                             (. tabs indexOfComponent this)))]
-                                      ;(println (type console))
                                       (doto console-panel
                                         (.setLayout (GridBagLayout.))
                                         (.setName "console-panel")
