@@ -51,7 +51,38 @@
 (doseq [setting editor-keybind-settings]
   (let [keybind (setting 0)
         action  (setting 1)]
-    (keys/define-keybind editor/maps keybind action)))
+    (keys/define-keybind editor/multi-line-maps keybind action)))
+
+
+(def search-keybind-settings
+  {
+   '(Ctrl h) editor/backward-char
+   '(Ctrl l) editor/forward-char
+
+   '(Alt h) editor/backward-word
+   '(Alt l) editor/forward-word
+   '(Alt Shift h) editor/begin-line
+   '(Alt Shift l) editor/end-line
+
+   '(Ctrl b) editor/delete-previous-char
+   '(Ctrl d) editor/delete-next-char
+
+   '(Ctrl c) editor/copy
+   '(Ctrl v) editor/paste
+   '(Ctrl x) editor/cut
+   '(Ctrl a) editor/selectAll
+   '(Ctrl z) editor/undo
+   '(Ctrl y) editor/redo
+   '(Ctrl p) editor/mark
+   'Return   search/operate-forward
+   '(Shift Return) search/operate-backword
+   '(Ctrl e) search/escape
+  })
+(doseq [setting search-keybind-settings]
+  (let [keybind (setting 0)
+        action  (setting 1)]
+    (keys/define-keybind editor/single-line-maps keybind action)))
+
 
 
 (def frame-keybind-settings

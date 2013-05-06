@@ -10,13 +10,8 @@
   (setImeEnable [value])
   (setInputMap [inputmap])
   (setActionMap [actionmap])
-  (setKeyStroke [keystroke]))
-
-; (defn make-maps
-;   [component mode]
-;   (doto (HashMap.)
-;     (.put "default" [(. component getInputMap mode)
-;                      (. component getActionMap)])))
+  (setKeyStroke [keystroke])
+  (getKeyMaps []))
 
 (definterface IKeyMaps
   (get [stroke-name]))
@@ -77,32 +72,35 @@
    'Shift InputEvent/SHIFT_DOWN_MASK})
 
 (def normal-keys
-  {'a KeyEvent/VK_A
-   'b KeyEvent/VK_B
-   'c KeyEvent/VK_C
-   'd KeyEvent/VK_D
-   'e KeyEvent/VK_E
-   'f KeyEvent/VK_F
-   'g KeyEvent/VK_G
-   'h KeyEvent/VK_H
-   'i KeyEvent/VK_I
-   'j KeyEvent/VK_J
-   'k KeyEvent/VK_K
-   'l KeyEvent/VK_L
-   'm KeyEvent/VK_M
-   'n KeyEvent/VK_N
-   'o KeyEvent/VK_O
-   'p KeyEvent/VK_P
-   'q KeyEvent/VK_Q
-   'r KeyEvent/VK_R
-   's KeyEvent/VK_S
-   't KeyEvent/VK_T
-   'u KeyEvent/VK_U
-   'v KeyEvent/VK_V
-   'w KeyEvent/VK_W
-   'x KeyEvent/VK_X
-   'y KeyEvent/VK_Y
-   'z KeyEvent/VK_Z})
+  {'a       KeyEvent/VK_A
+   'b       KeyEvent/VK_B
+   'c       KeyEvent/VK_C
+   'd       KeyEvent/VK_D
+   'e       KeyEvent/VK_E
+   'f       KeyEvent/VK_F
+   'g       KeyEvent/VK_G
+   'h       KeyEvent/VK_H
+   'i       KeyEvent/VK_I
+   'j       KeyEvent/VK_J
+   'k       KeyEvent/VK_K
+   'l       KeyEvent/VK_L
+   'm       KeyEvent/VK_M
+   'n       KeyEvent/VK_N
+   'o       KeyEvent/VK_O
+   'p       KeyEvent/VK_P
+   'q       KeyEvent/VK_Q
+   'r       KeyEvent/VK_R
+   's       KeyEvent/VK_S
+   't       KeyEvent/VK_T
+   'u       KeyEvent/VK_U
+   'v       KeyEvent/VK_V
+   'w       KeyEvent/VK_W
+   'x       KeyEvent/VK_X
+   'y       KeyEvent/VK_Y
+   'z       KeyEvent/VK_Z
+   'Return  KeyEvent/VK_ENTER
+   'Esc     KeyEvent/VK_ESCAPE
+   })
 
 (defn get-key-stroke
   "

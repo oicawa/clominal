@@ -293,7 +293,7 @@
     (doseq [setting settings]
       (let [keybind (setting 0)
             action  (setting 1)]
-        (keys/define-keybind editor/maps keybind action))))
+        (keys/define-keybind editor/multi-line-maps keybind action))))
   (doto text-pane
     (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_CLOJURE))
   (println "[clojure-mode] Loading completed."))

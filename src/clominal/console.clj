@@ -43,30 +43,31 @@
   []
   (let [is-marked    (atom false)
         out          (atom nil)
-        console      (proxy [JTextArea IMarkable IOutputComponent clominal.keys.IKeybindComponent] []
+        console      (proxy [JTextArea IMarkable clominal.keys.IKeybindComponent] []
                        (isMark [] @is-marked)
                        (setMark [marked]
                          (reset! is-marked marked))
+                       (setInputMap [inputmap] (. this setInputMap JComponent/WHEN_FOCUSED inputmap))
+                       (setActionMap [actionmap] (proxy-super setActionMap actionmap)))
+        root         (proxy [JScrollPane IOutputComponent] [console]
+                       (requestFocusInWindow []
+                         (. console requestFocusInWindow))
                        (getOut []
                          (if (nil? @out)
                              (reset! out (make-output-stream-with this)))
                          @out)
                        (setToSystemOut []
-                         (System/setOut (PrintStream. (. this getOut)))
-                         )
+                         (System/setOut (PrintStream. (. this getOut))))
                        (setToSystemErr []
-                         (System/setErr (PrintStream. (. this getOut)))
-                         )
+                         (System/setErr (PrintStream. (. this getOut))))
                        (flush []
-                         (SwingUtilities/invokeLater
-                           #(do
-                             (. this append (. @out toString))
-                             (. @out reset))))
-                       (setInputMap [inputmap] (. this setInputMap JComponent/WHEN_FOCUSED inputmap))
-                       (setActionMap [actionmap] (proxy-super setActionMap actionmap)))
-        console-panel  (proxy [JScrollPane] [console]
-                         (requestFocusInWindow []
-                           (. console requestFocusInWindow)))
+                         ; (SwingUtilities/invokeLater
+                         ;   #(do
+                         ;     (. console append (. @out toString))
+                         ;     (. @out reset)))
+                         (do
+                           (. console append (. @out toString))
+                           (. @out reset))))
         ;
         ; Others
         ;
@@ -81,15 +82,17 @@
       (.setName "console")
       (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
       (.setActionMap (. default-map getActionMap))
-      (.setToSystemOut)
-      (.setToSystemErr)
-      ;(.setEditable false)
       (.setEditable true))
 
     (doseq [component [console]]
       (set-font component (default-fonts (get-os-keyword))))
 
-    console-panel
+    (doto root
+      ;(.setToSystemOut)
+      ;(.setToSystemErr)
+      ;(.setEditable false)
+      )
+    
     ))
 
 

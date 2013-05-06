@@ -76,40 +76,14 @@
               (catch Exception e
                 (. e printStackTrace))))))))
 
-; (defn show-console
-;   [tabs console]
-;   (let [max-index (- (. tabs getTabCount) 1)]
-;     (println "[ START ] show-console looping.")
-;     (loop [i 0]
-;       (cond (< max-index i)
-;               (SwingUtilities/invokeLater
-;                 #(let [console-panel (proxy [JPanel IAppPane] []
-;                                       (canClose [] true)
-;                                       (getTabs [] tabs)
-;                                       (getTabIndex []
-;                                         (. tabs indexOfComponent this)))]
-;                   ;(println (type console))
-;                   (doto console-panel
-;                     (.setLayout (GridBagLayout.))
-;                     (.setName "console-panel")
-;                     (grid-bag-layout
-;                       :fill :BOTH
-;                       :gridx 0 :gridy 0 :weightx 1.0 :weighty 1.0
-;                       console))
-;                   (add-component tabs console/console-title console-panel)))
-;             (= console/console-title (. tabs getTitleAt i))
-;               (. tabs getTabComponent i)
-;             :else
-;               (recur (+ i 1))))
-;     (println "[  END  ] show-console loop.")))
-
 (definterface IFrame
   (showConsole []))
 
 (defn make-frame
   "Create clominal main frame."
   [mode]
-  (let [ime-mode     (atom nil)
+  (let [exception    (atom nil)
+        ime-mode     (atom nil)
         tabs         (proxy [JTabbedPane ITabbedPane clominal.keys.IKeybindComponent] []
                        (getCurrentPanel []
                          (let [index (. this getSelectedIndex)]
@@ -158,10 +132,14 @@
     ;;
     (def maps (keys/make-keymaps tabs JComponent/WHEN_IN_FOCUSED_WINDOW))
 
+    ;(. console setToSystemErr)
+
     (try
+      (println "[ START ] Loading settings...")
       (require 'settings)
+      (println "[  END  ] Loaded settings")
       (catch Exception e
-        (. e printStackTrace)))
+        (reset! exception e)))
 
     (let [tabs-map (. maps get "default")]
       (doto tabs
@@ -181,6 +159,11 @@
         tabs)
       (.setIconImage (. (ImageIcon. "./resources/clojure-icon.gif") getImage))
       (.addWindowListener (proxy [WindowAdapter] []
+                            (windowOpened [evt]
+                              (if (not (nil? @exception))
+                                  (do
+                                    (println "Exception occured.")
+                                    (. @exception printStackTrace))))
                             (windowClosing [evt]
                               (if (= '() (get-confirm-to-close-tabs tabs))
                                   (. frame dispose)
@@ -195,7 +178,5 @@
                                             nil))))
                             (windowClosed [evt]
                               (System/exit 0)))))
-    ;(reset! *frame* frame)
-    ;(reset! *console* con)
     ))
 
