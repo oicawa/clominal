@@ -45,7 +45,8 @@
    '(Ctrl f) search/show-find
    '(Ctrl r) search/show-replace
    
-   '(Alt i) editor/show-component-stack
+   ;'(Alt i) editor/show-component-stack
+   '(Alt i) editor/show-system-encoding
   })
 
 (doseq [setting editor-keybind-settings]

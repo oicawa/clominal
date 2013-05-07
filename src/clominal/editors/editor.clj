@@ -117,16 +117,30 @@
 (defn apply-editor-mode
   [text-pane]
   (println "apply-editor-mode")
-  (let [ext                   (get-extension (. text-pane getFileFullPath))
-        namespace-name        (format "mode.%s_mode" ext)
-        get-mode-name-symbol  (symbol namespace-name "get-mode-name")
-        init-mode-name-symbol (symbol namespace-name "init-mode")
+  (let [ext              (get-extension (. text-pane getFileFullPath))
+        namespace-name   (format "mode.%s_mode" ext)
+        init-mode-symbol (symbol namespace-name "init-mode")
         ]
     (if (try
           (require (symbol namespace-name))
           true
           (catch FileNotFoundException _ false))
-        (apply (find-var init-mode-name-symbol) [text-pane]))))
+        (apply (find-var init-mode-symbol) [text-pane]))))
+
+(defn open-file-with-editor-mode
+  [text-pane file]
+  (println "open-file-with-editor-mode")
+  (let [file-location    (FileLocation/create (. file getAbsolutePath))
+        file-name        (. file getName)
+        ext              (get-extension file-name)
+        namespace-name   (format "mode.%s_mode" ext)
+        init-mode-symbol (symbol namespace-name "init-mode")]
+    (try
+      (require (symbol namespace-name))
+      (apply (find-var init-mode-symbol) [text-pane])
+      true
+      (catch FileNotFoundException _ false))
+    (. text-pane load file-location (. text-pane getEncoding))))
 
 ;
 ; Text Editor
@@ -259,11 +273,16 @@
                              (. tabs setSelectedIndex index)
                              (if (nil? file)
                                  (. tabs setTitleAt index new-title)
-                                 (let [file-location (FileLocation/create (. file getAbsolutePath))
-                                       file-name     (. file-location getFileName)]
-                                   (. @text-pane load file-location nil)
-                                   (. tabs setTitleAt index file-name)
-                                   (apply-editor-mode @text-pane)))))
+                                 (open-file-with-editor-mode @text-pane file)
+                                 ; (let [file-location (FileLocation/create (. file getAbsolutePath))
+                                 ;       file-name     (. file-location getFileName)
+                                 ;       encoding      (. text-pane getEncoding)]
+                                 ;   (println "Encoding:" encoding)
+                                 ;   (. @text-pane load file-location encoding)
+                                 ;   (. tabs setTitleAt index file-name)
+                                 ;   (apply-editor-mode @text-pane)
+                                 ;   )
+                                   )))
                          (setFocus []
                            (. tabs setSelectedIndex (. this getTabIndex))
                            (. @text-pane requestFocusInWindow))
@@ -660,3 +679,6 @@
 
 (defaction show-component-stack [text-pane]
   (get-frame text-pane))
+
+(defaction show-system-encoding [text-pane]
+  (println "System Encoding:" (System/getProperty "file.encoding")))

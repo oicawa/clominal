@@ -132,7 +132,7 @@
     ;;
     (def maps (keys/make-keymaps tabs JComponent/WHEN_IN_FOCUSED_WINDOW))
 
-    ;(. console setToSystemErr)
+    (. console setToSystemErr)
 
     (try
       (println "[ START ] Loading settings...")
