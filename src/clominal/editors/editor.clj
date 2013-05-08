@@ -72,6 +72,7 @@
 
 (definterface ITextEditorPane
   (getRoot [])
+  (getUndoManager [])
   )
 
 ;
@@ -178,6 +179,7 @@
     ;
     (reset! text-pane (proxy [TextEditorPane ITextEditorPane IMarkable IKeybindComponent] []
                         (getRoot [] @root-panel)
+                        (getUndoManager [] um)
                         (getKeyMaps [] multi-line-maps)
                         (setDirty [dirty?]
                           (proxy-super setDirty dirty?)
@@ -287,7 +289,6 @@
                            (. tabs setSelectedIndex (. this getTabIndex))
                            (. @text-pane requestFocusInWindow))
                          (getStatusBar [] statusbar)
-                         (getUndoManager [] um)
                          (getSubPanel [] sub-panel)
                          (getFileFullPath []
                            (. @text-pane getFileFullPath))))
@@ -412,7 +413,8 @@
               line        (- (min input-value cnt) 1)
               element     (. root getElement line)
               rect        (. text-pane modelToView (. element getStartOffset))
-              view-rect   (.. text-pane getRoot getScroll getViewport getViewRect)]
+              ;view-rect   (.. text-pane getRoot getScroll getViewport getViewRect)
+              view-rect   (.. text-pane getParent getViewRect)]
           (. rect setSize 10 (. view-rect height))
           (. text-pane scrollRectToVisible rect)
           (. text-pane setCaretPosition (. element getStartOffset))))))
@@ -562,16 +564,16 @@
 (defaction close
   [text-pane]
   (if (. text-pane isDirty)
-      (let [option (JOptionPane/showConfirmDialog (. text-pane getTabs)
+      (let [option (JOptionPane/showConfirmDialog (.. text-pane getRoot getTabs)
                                                   "This document is modified.\nDo you save?")]
         (cond (= option JOptionPane/YES_OPTION)
                 (do 
                   (if (= nil (. text-pane getFileFullPath))
                       (save-as-document text-pane)
                       (save-document text-pane))
-                  (.. text-pane getTabs (remove (. text-pane getRoot))))
+                  (.. text-pane getRoot getTabs (remove (. text-pane getRoot))))
               (= option JOptionPane/NO_OPTION)
-                (.. text-pane getTabs (remove (. text-pane getRoot)))
+                (.. text-pane getRoot getTabs (remove (. text-pane getRoot)))
               :else
                 nil))
       (.. text-pane getRoot getTabs (remove (. text-pane getRoot)))))
