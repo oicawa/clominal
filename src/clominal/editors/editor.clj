@@ -73,6 +73,7 @@
 (definterface ITextEditorPane
   (getRoot [])
   (getUndoManager [])
+  (isNew [])
   )
 
 ;
@@ -141,7 +142,8 @@
       (apply (find-var init-mode-symbol) [text-pane])
       true
       (catch FileNotFoundException _ false))
-    (. text-pane load file-location (. text-pane getEncoding))))
+    (. text-pane load file-location (. text-pane getEncoding))
+    ))
 
 ;
 ; Text Editor
@@ -163,6 +165,7 @@
         ime-mode     (atom nil)
         um           (UndoManager.)
         is-marked    (atom false)
+        is-new       (atom true)
         text-pane    (atom nil)
         sub-panel    (JPanel. (GridBagLayout.))
         root-panel   (atom nil)
@@ -180,13 +183,16 @@
     (reset! text-pane (proxy [TextEditorPane ITextEditorPane IMarkable IKeybindComponent] []
                         (getRoot [] @root-panel)
                         (getUndoManager [] um)
+                        (isNew [] @is-new)
                         (getKeyMaps [] multi-line-maps)
                         (setDirty [dirty?]
                           (proxy-super setDirty dirty?)
                           (let [index    (. tabs getSelectedIndex)
                                 filename (if (. this isLocalAndExists) (. this getFileName) new-title)
                                 title    (str filename (if dirty? " *" ""))]
-                            (. tabs setTitleAt index title)))
+                            (. tabs setTitleAt index title)
+                            (if (not dirty?)
+                                (reset! is-new false))))
                         (getInputMethodRequests []
                           (if (= nil @improved-imr)
                               (let [original-imr (proxy-super getInputMethodRequests)]
@@ -275,16 +281,9 @@
                              (. tabs setSelectedIndex index)
                              (if (nil? file)
                                  (. tabs setTitleAt index new-title)
-                                 (open-file-with-editor-mode @text-pane file)
-                                 ; (let [file-location (FileLocation/create (. file getAbsolutePath))
-                                 ;       file-name     (. file-location getFileName)
-                                 ;       encoding      (. text-pane getEncoding)]
-                                 ;   (println "Encoding:" encoding)
-                                 ;   (. @text-pane load file-location encoding)
-                                 ;   (. tabs setTitleAt index file-name)
-                                 ;   (apply-editor-mode @text-pane)
-                                 ;   )
-                                   )))
+                                 (do
+                                   (open-file-with-editor-mode @text-pane file)
+                                   (reset! is-new false)))))
                          (setFocus []
                            (. tabs setSelectedIndex (. this getTabIndex))
                            (. @text-pane requestFocusInWindow))
@@ -555,7 +554,7 @@
 
 (defaction file-save
   [text-pane]
-  (if (. text-pane isLocalAndExists)
+  (if (. text-pane isNew)
       (save-document text-pane)
       (do
         (save-as-document text-pane)
@@ -568,7 +567,10 @@
                                                   "This document is modified.\nDo you save?")]
         (cond (= option JOptionPane/YES_OPTION)
                 (do 
-                  (if (= nil (. text-pane getFileFullPath))
+                  (println "FileFullPath   :" (. text-pane getFileFullPath))
+                  (println "LocalAndExists :" (. text-pane isLocalAndExists))
+                  (if ;(= nil (. text-pane getFileFullPath))
+                      (. text-pane isNew)
                       (save-as-document text-pane)
                       (save-document text-pane))
                   (.. text-pane getRoot getTabs (remove (. text-pane getRoot))))
