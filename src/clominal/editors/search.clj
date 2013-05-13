@@ -40,6 +40,10 @@
   (isReplace [])
   (isAll []))
 
+(definterface IInputField
+  (getUndoManager []))
+
+
 (defn make-textbox
   [text-pane
    improved-imr
@@ -56,9 +60,10 @@
    root           
    policy         
    default-map]
-  (proxy [JTextField IMarkable IKeybindComponent] []
+  (proxy [JTextField IInputField IMarkable IKeybindComponent] []
     ; (transferFocusBackward []
     ;   (. @replace-textbox requestFocus))
+    (getUndoManager [] um)
     (getKeyMaps [] editor/single-line-maps)
     (getInputMethodRequests []
       (if (= nil @improved-imr)
@@ -92,12 +97,12 @@
       (reset! is-marked marked))))
 
 
- []
 (defn make-search-panel
-  [text-pane replace?]
+  [text-pane replace? selected?]
   (let [improved-imr    (atom nil)
         ime-mode        (atom nil)
-        um              (UndoManager.)
+        find-um         (UndoManager.)
+        replace-um      (UndoManager.)
         is-marked       (atom false)
         find-caption    (atom nil)
         find-textbox    (atom nil)
@@ -106,15 +111,17 @@
         match-case?     (atom nil)
         regular?        (atom nil)
         is-all?         (atom nil)
+        in-selection?   (atom nil)
         filler          (atom nil)
         root            (atom nil)
         policy          (atom nil)
-        default-map     (. editor/single-line-maps get "default")]
+        default-map     (. editor/single-line-maps get "default")
+        ]
     (reset! find-caption
       (JLabel. "Find:"))
 
     (reset! find-textbox
-      (doto (make-textbox text-pane improved-imr ime-mode um is-marked
+      (doto (make-textbox text-pane improved-imr ime-mode find-um is-marked
                           find-caption find-textbox
                           replace-caption replace-textbox
                           match-case? regular?
@@ -123,12 +130,15 @@
         (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
         (.setActionMap (. default-map getActionMap))))
 
+    (doto (. @find-textbox getDocument)
+      (.addUndoableEditListener find-um))
+
     (reset! replace-caption
       (doto (JLabel. "Replace:")
         (.setVisible replace?)))
 
     (reset! replace-textbox
-      (doto (make-textbox text-pane improved-imr ime-mode um is-marked
+      (doto (make-textbox text-pane improved-imr ime-mode replace-um is-marked
                           find-caption find-textbox
                           replace-caption replace-textbox
                           match-case? regular?
@@ -137,6 +147,9 @@
         (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
         (.setActionMap (. default-map getActionMap))
         (.setVisible replace?)))
+
+    (doto (. @replace-textbox getDocument)
+      (.addUndoableEditListener replace-um))
 
     (reset! match-case?
       (doto (JCheckBox. "Match Case  " false)
@@ -152,6 +165,10 @@
     (reset! is-all?
       (doto (JCheckBox. "All  " false)
         (.setMnemonic (keys/normal-keys 'a))))
+
+    (reset! in-selection?
+      (doto (JCheckBox. "In selection  " selected?)
+        (.setMnemonic (keys/normal-keys 's))))
 
     (reset! filler
       (JLabel. ""))
@@ -193,7 +210,8 @@
                     (.setMatchCase (. @match-case? isSelected))
                     (.setRegularExpression (. @regular? isSelected))
                     (.setSearchFor (. @find-textbox getText))
-                    (.setReplaceWith (. @replace-textbox getText)))))
+                    (.setReplaceWith (. @replace-textbox getText))
+                    (.setSearchSelectionOnly (. @in-selection? isSelected)))))
               (getTextPane []
                 text-pane)
               (isReplace []
@@ -214,6 +232,8 @@
           :gridy 0 :gridx 4 :weightx 0.0
           @is-all?
           :gridy 0 :gridx 5 :weightx 0.0
+          @in-selection?
+          :gridy 0 :gridx 6 :weightx 0.0
           @filler
           :gridy 1 :gridx 0 :weightx 0.0
           @replace-caption
@@ -228,8 +248,8 @@
         text-pane (. root getTextPane)]
     (if (. root isReplace)
         (if (. root isAll)
-            (println "replace:" (SearchEngine/replace text-pane context))
-            (println "replace all:" (SearchEngine/replaceAll text-pane context)))
+            (println "replace all:" (SearchEngine/replaceAll text-pane context))
+            (println "replace:" (SearchEngine/replace text-pane context)))
         (if (. root isAll)
             (println "*** NOT IMPLEMENTED ***")
             (println "find:" (SearchEngine/find text-pane context))))))
@@ -251,8 +271,13 @@
         (. root-panel setFocus))))
 
 (defaction show-find [text-pane]
-  (editor/show-sub-panel text-pane (make-search-panel text-pane false)))
+  (editor/show-sub-panel text-pane (make-search-panel text-pane false false)))
+
+(defaction show-find-in-selection [text-pane]
+  (editor/show-sub-panel text-pane (make-search-panel text-pane false true)))
 
 (defaction show-replace [text-pane]
-  (editor/show-sub-panel text-pane (make-search-panel text-pane true)))
+  (editor/show-sub-panel text-pane (make-search-panel text-pane true false)))
 
+(defaction show-replace-in-selection [text-pane]
+  (editor/show-sub-panel text-pane (make-search-panel text-pane true true)))

@@ -44,6 +44,8 @@
    '(Ctrl g) editor/goto-line
    '(Ctrl f) search/show-find
    '(Ctrl r) search/show-replace
+   '(Ctrl Shift f) search/show-find-in-selection
+   '(Ctrl Shift r) search/show-replace-in-selection
    
    ;'(Alt i) editor/show-component-stack
    '(Alt i) editor/show-system-encoding
@@ -84,6 +86,35 @@
         action  (setting 1)]
     (keys/define-keybind editor/single-line-maps keybind action)))
 
+
+(def tool-keybind-settings
+  {
+   '(Ctrl h) editor/backward-char
+   '(Ctrl l) editor/forward-char
+
+   '(Alt h) editor/backward-word
+   '(Alt l) editor/forward-word
+   '(Alt Shift h) editor/begin-line
+   '(Alt Shift l) editor/end-line
+
+   '(Ctrl b) editor/delete-previous-char
+   '(Ctrl d) editor/delete-next-char
+
+   '(Ctrl c) editor/copy
+   '(Ctrl v) editor/paste
+   '(Ctrl x) editor/cut
+   '(Ctrl a) editor/selectAll
+   '(Ctrl z) editor/undo
+   '(Ctrl y) editor/redo
+   '(Ctrl p) editor/mark
+   'Return   search/operate-forward
+   '(Shift Return) search/operate-backword
+   '(Ctrl e) search/escape
+  })
+(doseq [setting search-keybind-settings]
+  (let [keybind (setting 0)
+        action  (setting 1)]
+    (keys/define-keybind editor/single-line-maps keybind action)))
 
 
 (def frame-keybind-settings

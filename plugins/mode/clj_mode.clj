@@ -125,10 +125,8 @@
                         segment     (Segment.)
                         is-end?     (if goForward
                                         (fn [index segment]
-                                          ;(println "[forward ] index:" index ", segment:" segment)
                                           (<= (+ (. segment offset) (. segment count)) index))
                                         (fn [index segment]
-                                          ;(println "[backward] index:" index ", segment:" segment)
                                           (< index (. segment offset))))
                         step        (if goForward 1 -1)]
                     (loop [this-line-index init-line-index
@@ -271,7 +269,6 @@
 (defaction print-current-token-info [text-pane]
   (let [offset (. text-pane getCaretPosition)
         token  (editor/get-token text-pane offset)]
-    (println "----------")
     (println "[current-token]:" token)))
 
 

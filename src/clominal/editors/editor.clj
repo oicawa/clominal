@@ -65,7 +65,6 @@
   (load [file])
   (setFocus [])
   (getStatusBar [])
-  (getUndoManager [])
   (getSubPanel [])
   (getFileFullPath [])
   )
@@ -131,7 +130,6 @@
 
 (defn open-file-with-editor-mode
   [text-pane file]
-  (println "open-file-with-editor-mode")
   (let [file-location    (FileLocation/create (. file getAbsolutePath))
         file-name        (. file getName)
         ext              (get-extension file-name)
@@ -498,12 +496,12 @@
 ;;
 
 (defaction undo [text-pane]
-  (let [um  (. text-pane getUndoManager)]
+  (let [um (. text-pane getUndoManager)]
     (if (. um canUndo)
         (. um undo))))
 
 (defaction redo [text-pane]
-  (let [um  (. text-pane getUndoManager)]
+  (let [um (. text-pane getUndoManager)]
     (if (. um canRedo)
         (. um redo))))
 
@@ -554,7 +552,8 @@
 
 (defaction file-save
   [text-pane]
-  (if (. text-pane isNew)
+  (if ;(. text-pane isNew)
+      (. text-pane isDirty)
       (save-document text-pane)
       (do
         (save-as-document text-pane)
@@ -567,8 +566,6 @@
                                                   "This document is modified.\nDo you save?")]
         (cond (= option JOptionPane/YES_OPTION)
                 (do 
-                  (println "FileFullPath   :" (. text-pane getFileFullPath))
-                  (println "LocalAndExists :" (. text-pane isLocalAndExists))
                   (if ;(= nil (. text-pane getFileFullPath))
                       (. text-pane isNew)
                       (save-as-document text-pane)
@@ -597,11 +594,7 @@
     (loop [r (LispReader/read pushback-reader false nil true)]
       (if (= EOF r)
           nil
-          (let [row (. pushback-reader getLineNumber)
-                ;col (. pushback-reader getColumnNumber)
-                ]
-            ;(println "row:" row ", col:" col ", r:" r)
-            (println "row:%d, emit:%s, row:%s" row (. r canEmit))
+          (let [row (. pushback-reader getLineNumber)]
             (recur (LispReader/read pushback-reader false nil true)))))))
 
 (defaction set-paragraph-attribute [text-pane]

@@ -33,14 +33,10 @@
       ;(.setPreferredSize nil)
       (.setLayout (GridBagLayout.))
       (grid-bag-layout
-        :gridx 0, :gridy 0
         :anchor :WEST
-        :weightx 1.0 :weighty 0.0
-        :fill :HORIZONTAL
+        :gridx 0 :gridy 0 :weightx 1.0 :weighty 0.0 :fill :HORIZONTAL
         textbox
-        :gridx 0, :gridy 1
-        :weightx 1.0 :weighty 1.0
-        :fill :BOTH
+        :gridx 0 :gridy 1 :weightx 1.0 :weighty 1.0 :fill :BOTH
         tool-list))
     (. dialog setVisible true)
     (let [input-value (. textbox getText)]
