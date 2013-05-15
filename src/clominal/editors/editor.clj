@@ -186,7 +186,7 @@
                         (setDirty [dirty?]
                           (proxy-super setDirty dirty?)
                           (let [index    (. tabs getSelectedIndex)
-                                filename (if (. this isLocalAndExists) (. this getFileName) new-title)
+                                filename (if (. this isNew) new-title (. this getFileName))
                                 title    (str filename (if dirty? " *" ""))]
                             (. tabs setTitleAt index title)
                             (if (not dirty?)
@@ -280,8 +280,9 @@
                              (if (nil? file)
                                  (. tabs setTitleAt index new-title)
                                  (do
+                                   (reset! is-new false)
                                    (open-file-with-editor-mode @text-pane file)
-                                   (reset! is-new false)))))
+                                   ))))
                          (setFocus []
                            (. tabs setSelectedIndex (. this getTabIndex))
                            (. @text-pane requestFocusInWindow))
@@ -552,12 +553,16 @@
 
 (defaction file-save
   [text-pane]
-  (if ;(. text-pane isNew)
-      (. text-pane isDirty)
-      (save-document text-pane)
-      (do
-        (save-as-document text-pane)
-        (apply-editor-mode text-pane))))
+  (cond (. text-pane isNew)
+          (do
+            (save-as-document text-pane)
+            (apply-editor-mode text-pane))
+        (. text-pane isDirty)
+          (save-document text-pane)))
+        ; :else
+        ;   (do
+        ;     (save-as-document text-pane)
+        ;     (apply-editor-mode text-pane))))
 
 (defaction close
   [text-pane]
