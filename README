@@ -1,6 +1,30 @@
 # clominal
 
-FIXME: write description
+I am developing a tool named clominal from 2012.
+I will make this tool as a application platform like Emacs or Eclipse recklessly.
+
+'clominal' is implemented by clojure.
+There are 2 points why I selected 'clojure'.
+
+First, It is a dialect of Lisp.
+Second, it works on JVM.
+
+Speaking only about language specification, Lisp is more powerful than any other not Lisp languages.
+(If say further, I think the CL is the most powerful language in other dialects of Lisps.)
+
+If selected Lisp, we can use macro.
+Perhaps, in the huge application like IDE, the size of code will become compact. (I expect that. :-)
+
+And then about working on JVM.
+CL is the most powerful language in the language specification.
+But if you want to make some usefull tools in speedy,
+the things what you want is many useful libraries, rather than the powerfull specification language.
+
+It is very easy to use java libraries from clojure.
+So, we can use many 3rd party libraries when we make some tools.
+
+
+
 
 ## Usage
 
