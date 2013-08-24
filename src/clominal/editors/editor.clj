@@ -65,7 +65,9 @@
   (load [file])
   (setFocus [])
   (getStatusBar [])
-  (getSubPanel [])
+  (getSubPanel [nameSpace])
+  (addSubPanel [nameSpace subPanel])
+  (showSubPanel [target-panel])
   (getFileFullPath [])
   )
 
@@ -159,14 +161,15 @@
         ;
         ; Text Editor
         ;
-        improved-imr (atom nil)
-        ime-mode     (atom nil)
-        um           (UndoManager.)
-        is-marked    (atom false)
-        is-new       (atom true)
-        text-pane    (atom nil)
-        sub-panel    (JPanel. (GridBagLayout.))
-        root-panel   (atom nil)
+        improved-imr   (atom nil)
+        ime-mode       (atom nil)
+        um             (UndoManager.)
+        is-marked      (atom false)
+        is-new         (atom true)
+        text-pane      (atom nil)
+        sub-panel-root (JPanel. (GridBagLayout.))
+        subpanels      (HashMap.)
+        root-panel     (atom nil)
         ;
         ; Others
         ;
@@ -227,7 +230,9 @@
       (.setActionMap (. default-map getActionMap))
       (.enableInputMethods true)
       (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_NONE)
-      (.setPaintTabLines true))
+      (.setTabSize 4)
+      (.setPaintTabLines true)
+      )
 
     (doto (. @text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
@@ -241,9 +246,9 @@
     ;
     ; Sub Panel
     ;
-    (doto sub-panel
+    (doto sub-panel-root
       (.setBorder (LineBorder. Color/GRAY))
-      (.setVisible false))
+      (.setVisible true))
 
     ;
     ; StatusBar
@@ -287,7 +292,23 @@
                            (. tabs setSelectedIndex (. this getTabIndex))
                            (. @text-pane requestFocusInWindow))
                          (getStatusBar [] statusbar)
-                         (getSubPanel [] sub-panel)
+                         (getSubPanel [nameSpace]
+                           (if (. subpanels containsKey nameSpace)
+                               (. subpanels get nameSpace)
+                               nil))
+                         (addSubPanel [nameSpace target-sub-panel]
+                           (if-not (. subpanels containsKey nameSpace)
+                                   (. subpanels put nameSpace target-sub-panel)))
+                         (showSubPanel [target-panel]
+                           (doto sub-panel-root
+                             (.removeAll)
+                             (grid-bag-layout
+                               :gridx 0 :gridy 0 :anchor :WEST :fill :HORIZONTAL :weightx 1.0
+                               target-panel))
+                           (. sub-panel-root setVisible false)
+                           (. sub-panel-root setVisible true)
+                           (. target-panel setFocus)
+                           (. sub-panel-root validate))
                          (getFileFullPath []
                            (. @text-pane getFileFullPath))))
     (doto @root-panel
@@ -304,7 +325,7 @@
         :weightx 1.0
         :weighty 0.0
         :gridy 1
-        sub-panel
+        sub-panel-root
         :fill :HORIZONTAL
         :weightx 1.0
         :weighty 0.0
@@ -661,26 +682,10 @@
   (let [token (get-token text-pane (. text-pane getCaretPosition))]
     (println "Caret Token:" token)))
 
-(defn show-sub-panel
-  [text-pane target-panel]
-  (let [root      (. text-pane getRoot)
-        sub-panel (. root getSubPanel)]
-    (println "target-panel:" (type target-panel))
-    (println "sub-panel:" (type sub-panel))
-    (doto sub-panel
-      (.removeAll)
-      (grid-bag-layout
-        :gridx 0 :gridy 0 :anchor :WEST :fill :HORIZONTAL :weightx 1.0
-        target-panel)
-        )
-    (. sub-panel setVisible false)
-    (. sub-panel setVisible true)
-    (. target-panel setFocus)
-    (. sub-panel validate)
-    ))
 
 (defaction show-component-stack [text-pane]
   (get-frame text-pane))
 
 (defaction show-system-encoding [text-pane]
   (println "System Encoding:" (System/getProperty "file.encoding")))
+
