@@ -8,6 +8,7 @@
            (java.awt.im InputMethodRequests)
            (java.beans PropertyChangeListener)
            (java.util ArrayList)
+           (java.util.regex Pattern)
            (javax.swing JList InputMap ActionMap JComponent Action LayoutFocusTraversalPolicy
                         JTextArea
                         JLabel JTextField JPanel JCheckBox JOptionPane SwingConstants JFileChooser
@@ -414,30 +415,50 @@
                       (. visible y (- (+ (. bounds y) (. bounds height)) (. visible height))))
                   (. text-pane scrollRectToVisible visible))))))))
 
-
-(defn get-findstring-positions
+(defn get-find-regex-positions
+  [text-pane start end baseRegEx matchCase wholeWord]
+  (let [searchIn (. text-pane getText start (- end start))
+        regEx    (if wholeWord (str "\\b" baseRegEx "\\b") baseRegEx)
+        flags    (+ Pattern/MULTILINE     ;; '^' and '$' are done per line.
+                    (if matchCase 0 (+ Pattern/CASE_INSENSITIVE Pattern/UNICODE_CASE)))
+        pattern  (Pattern/compile regEx flags)
+        matcher  (. pattern matcher searchIn)]
+    (loop [result ()]
+      (if (. matcher find)
+          (recur (cons (Point. (+ start (. matcher start)) (+ start (. matcher end))) result))
+          (reverse result)))))
+          
+(defn get-find-normal-positions
+  [text-pane start end search-for match-case? whole-word?]
+  (loop [offset start
+         result '()]
+    (if (< end offset)
+        (reverse result)
+        (let [length        (+ (- end offset) 1)
+              search-in     (. text-pane getText offset length)
+              search-in-pos (SearchEngine/getNextMatchPos search-for search-in true match-case? whole-word?)]
+          (if (< search-in-pos 0)
+              (reverse result)
+              (let [total-start-pos   (+ offset search-in-pos)
+                    total-end-pos     (+ total-start-pos (count search-for))
+                    next-offset (+ total-start-pos 1)]
+                (recur next-offset (cons (Point. total-start-pos total-end-pos) result))))))))
+          
+(defn get-find-positions
   [search-panel]
   (let [context     (. search-panel getSearchContext)
         search-for  (. context getSearchFor)
         forward?    true
         match-case? (. context getMatchCase)
         whole-word? (. context getWholeWord)
+        regular?    (. context isRegularExpression)
         selection?  (. search-panel isSelectionOnly)
         text-pane   (. search-panel getTextPane)
         start       (if selection? (. text-pane getSelectionStart) 0)
         end         (if selection? (. text-pane getSelectionEnd) (.. text-pane getDocument getLength))]
-    (loop [offset start
-           result '()]
-      (if (< end offset)
-          (reverse result)
-          (let [length        (+ (- end offset) 1)
-                search-in     (. text-pane getText offset length)
-                search-in-pos (SearchEngine/getNextMatchPos search-for search-in forward? match-case? whole-word?)]
-            (if (< search-in-pos 0)
-                (reverse result)
-                (let [total-pos   (+ offset search-in-pos)
-                      next-offset (+ total-pos 1)]
-                  (recur next-offset (cons total-pos result)))))))))
+    (if regular?
+        (get-find-regex-positions text-pane start end search-for match-case? whole-word?)
+        (get-find-normal-positions text-pane start end search-for match-case? whole-word?))))
 
 (def matched-painter (DefaultHighlighter$DefaultHighlightPainter. Color/GRAY))
 
@@ -462,12 +483,12 @@
         text-pane      (. search-panel getTextPane)
         highlighter    (. text-pane getHighlighter)
         search-for     (. context getSearchFor)
-        positions      (get-findstring-positions search-panel)]
+        positions      (get-find-positions search-panel)]
     (doseq [highlight-tag highlight-tags]
       (. highlighter removeHighlight highlight-tag))
     (. highlight-tags clear)
     (doseq [pos positions]
-      (let [new-tag (. highlighter addHighlight pos (+ pos (count search-for)) matched-painter)]
+      (let [new-tag (. highlighter addHighlight (. pos getX) (. pos getY) matched-painter)]
         (. highlight-tags add new-tag)))
     (move-sbling-highlight-pos search-panel forward?)))
 
