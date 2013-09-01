@@ -42,8 +42,8 @@
    '(Ctrl p) editor/mark
    '(Ctrl e) editor/escape
    '(Ctrl g) editor/goto-line
-   '(Ctrl f) search/show-find
-   '(Ctrl r) search/show-replace
+   '(Ctrl f) search/show-as-find
+   '(Ctrl r) search/show-as-replace
    
    ;'(Alt i) editor/show-component-stack
    '(Alt i) editor/show-system-encoding
@@ -78,10 +78,9 @@
    '(Ctrl z) editor/undo
    '(Ctrl y) editor/redo
    '(Ctrl p) editor/mark
-   'F3             search/find-next-from-by-search-panel
-   '(Shift F3)     search/find-prev-from-by-search-panel
-   'Return         search/operate-forward
-   '(Shift Return) search/operate-backword
+   'F3             search/find-next-in-search-panel
+   '(Shift F3)     search/find-prev-in-search-panel
+   'Return         search/find-operate
    '(Ctrl e)       search/hide
    'Esc            search/hide
   })
@@ -111,8 +110,7 @@
    '(Ctrl z) editor/undo
    '(Ctrl y) editor/redo
    '(Ctrl p) editor/mark
-   'Return   search/operate-forward
-   '(Shift Return) search/operate-backword
+   'Return   search/find-operate
    '(Ctrl e) search/hide
   })
 (doseq [setting search-keybind-settings]

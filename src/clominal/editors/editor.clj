@@ -8,7 +8,7 @@
            (java.awt.im InputMethodRequests)
            (java.beans PropertyChangeListener)
            (java.util HashMap)
-           (javax.swing JList InputMap ActionMap JComponent Action
+           (javax.swing JList InputMap ActionMap JComponent Action BoxLayout
                         ; JTextPane JScrollPane
                         JLabel JTextField JPanel JCheckBox JOptionPane SwingConstants JFileChooser
                         SwingUtilities AbstractAction JColorChooser)
@@ -67,15 +67,12 @@
   (getStatusBar [])
   (getSubPanel [nameSpace])
   (addSubPanel [nameSpace subPanel])
-  (showSubPanel [target-panel])
-  (getFileFullPath [])
-  )
+  (getFileFullPath []))
 
 (definterface ITextEditorPane
   (getRoot [])
   (getUndoManager [])
-  (isNew [])
-  )
+  (isNew []))
 
 ;
 ; Improved InputMethodRequests.
@@ -167,7 +164,7 @@
         is-marked      (atom false)
         is-new         (atom true)
         text-pane      (atom nil)
-        sub-panel-root (JPanel. (GridBagLayout.))
+        sub-panel-root (JPanel.)
         subpanels      (HashMap.)
         root-panel     (atom nil)
         ;
@@ -248,6 +245,7 @@
     ;
     (doto sub-panel-root
       (.setBorder (LineBorder. Color/GRAY))
+      (.setLayout (BoxLayout. sub-panel-root BoxLayout/PAGE_AXIS))
       (.setVisible true))
 
     ;
@@ -296,19 +294,18 @@
                            (if (. subpanels containsKey nameSpace)
                                (. subpanels get nameSpace)
                                nil))
-                         (addSubPanel [nameSpace target-sub-panel]
-                           (if-not (. subpanels containsKey nameSpace)
-                                   (. subpanels put nameSpace target-sub-panel)))
-                         (showSubPanel [target-panel]
-                           (doto sub-panel-root
-                             (.removeAll)
-                             (grid-bag-layout
-                               :gridx 0 :gridy 0 :anchor :WEST :fill :HORIZONTAL :weightx 1.0
-                               target-panel))
-                           (. sub-panel-root setVisible false)
-                           (. sub-panel-root setVisible true)
-                           (. target-panel setFocus)
-                           (. sub-panel-root validate))
+                         (addSubPanel [nameSpace sub-panel]
+                           (. sub-panel-root add sub-panel)
+                           (. subpanels put nameSpace sub-panel))
+                         ; (showSubPanel [target-panel]
+                         ;   (doto sub-panel-root
+                         ;     (.removeAll)
+                         ;     (grid-bag-layout
+                         ;       :gridx 0 :gridy 0 :anchor :WEST :fill :HORIZONTAL :weightx 1.0
+                         ;       target-panel))
+                         ;   (. target-panel setVisible true)
+                         ;   (. target-panel setFocus)
+                         ;   (. sub-panel-root validate))
                          (getFileFullPath []
                            (. @text-pane getFileFullPath))))
     (doto @root-panel
@@ -645,27 +642,21 @@
           (. doc insertString pos val style)))))
 
 
+(defn get-line-index
+  [text-pane offset]
+  (let [root (.. text-pane getDocument getDefaultRootElement)]
+    (. root getElementIndex offset)))
+
+(defn get-line-element
+  [text-pane line-index]
+  (let [root (.. text-pane getDocument getDefaultRootElement)]
+    (. root getElement line-index)))
+
 (defn get-token
   [text-pane offset]
-  (let [doc          (. text-pane getDocument)
-        map          (. doc getDefaultRootElement)
-        line-index   (. map getElementIndex offset)
-        ; line-element (. map getElement line-index)
-        ; init-start   (. line-element getStartOffset)
-        ; init-end     (. line-element getEndOffset)
-        token-list   (. doc getTokenListForLine line-index)]
+  (let [line-index   (get-line-index text-pane offset)
+        token-list   (.. text-pane getDocument (getTokenListForLine line-index))]
     (RSyntaxUtilities/getTokenAtOffset token-list offset)))
-
-; (defn get-token
-;   [text-pane offset]
-;   (let [line (. text-pane getLineOfOffset offset)]
-;     (loop [token  (. text-pane getTokenListForLine line)]
-;       (cond (= nil token)
-;               nil
-;             (. token containsPosition offset)
-;               token
-;             :else
-;               (recur (. token getNextToken))))))
 
 (defaction print-current-line-tokens [text-pane]
   (let [offset (. text-pane getCaretPosition)

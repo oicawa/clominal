@@ -4,7 +4,7 @@
   (:require [clojure.contrib.string :as string])
   (:use [clominal.utils])
   (:import (java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
-           (java.awt.event ActionEvent ActionListener)
+           (java.awt.event ActionEvent ActionListener ComponentListener)
            (java.awt.im InputMethodRequests)
            (java.beans PropertyChangeListener)
            (java.util ArrayList)
@@ -102,151 +102,11 @@
     (isMark [] @is-marked)
     (setMark [marked]
       (reset! is-marked marked))))
+        
 
 
-(defn make-search-panel
-  [text-pane]
-  (let [improved-imr     (atom nil)
-        ime-mode         (atom nil)
-        find-um          (UndoManager.)
-        replace-um       (UndoManager.)
-        is-marked        (atom false)
-        find-caption     (atom nil)
-        find-textbox     (atom nil)
-        replace-caption  (atom nil)
-        replace-textbox  (atom nil)
-        match-case-check (atom nil)
-        regular-check    (atom nil)
-        selection-check  (atom nil)
-        filler           (atom nil)
-        root             (atom nil)
-        policy           (atom nil)
-        default-map      (. editor/single-line-maps get "default")
-        context          (SearchContext.)
-        selection-start  (. text-pane getSelectionStart)
-        selection-end    (. text-pane getSelectionEnd)
-        highlight-tags   (ArrayList.)
-        ]
 
-    (println "==========")
-    (println "Selection start :" selection-start)
-    (println "          end   :" selection-end)
 
-    (reset! find-caption
-      (JLabel. "Find:"))
-
-    (reset! find-textbox
-      (doto (make-textbox text-pane improved-imr ime-mode find-um is-marked
-                          find-caption find-textbox
-                          replace-caption replace-textbox
-                          match-case-check regular-check
-                          filler root policy default-map)
-        (.setFocusAccelerator \F)
-        (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
-        (.setActionMap (. default-map getActionMap))))
-
-    (doto (. @find-textbox getDocument)
-      (.addUndoableEditListener find-um)
-      (.addDocumentListener
-        (proxy [DocumentListener] []
-          (changedUpdate [evt])
-          (insertUpdate [evt] (. context setSearchFor (. @find-textbox getText)))
-          (removeUpdate [evt] (. context setSearchFor (. @find-textbox getText))))))
-
-    (reset! replace-caption (JLabel. "Replace:"))
-
-    (reset! replace-textbox
-      (doto (make-textbox text-pane improved-imr ime-mode replace-um is-marked
-                          find-caption find-textbox
-                          replace-caption replace-textbox
-                          match-case-check regular-check
-                          filler root policy default-map)
-        (.setFocusAccelerator \R)
-        (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
-        (.setActionMap (. default-map getActionMap))))
-
-    (doto (. @replace-textbox getDocument)
-      (.addUndoableEditListener replace-um)
-      (.addDocumentListener
-        (proxy [DocumentListener] []
-          (changedUpdate [evt])
-          (insertUpdate [evt] (. context setReplaceWith (. @replace-textbox getText)))
-          (removeUpdate [evt] (. context setReplaceWith (. @replace-textbox getText))))))
-
-    (reset! match-case-check
-      (doto (JCheckBox. "Match Case  " false)
-        (.setMnemonic (keys/normal-keys 'm))
-        (.addActionListener
-          (proxy [ActionListener] []
-            (actionPerformed [evt]
-              (println "Match Case:" (. @match-case-check isSelected))
-              (. context setMatchCase (. @match-case-check isSelected)))))))
-
-    (reset! regular-check
-      (doto (JCheckBox. "Regular Expression  " false)
-        (.setMnemonic (keys/normal-keys 'e))
-        (.addActionListener
-          (proxy [ActionListener] []
-            (actionPerformed [evt]
-              (println "Regular Expression:" (. @regular-check isSelected))
-              (. context setRegularExpression (. @regular-check isSelected)))))))
-
-    (reset! selection-check
-      (doto (JCheckBox. "In selection  " (< selection-start selection-end))
-        (.setMnemonic (keys/normal-keys 's))
-        (.addActionListener
-          (proxy [ActionListener] []
-            (actionPerformed [evt]
-              (println "In Selection:" (. @selection-check isSelected))
-              (. context setSearchSelectionOnly (. @selection-check isSelected)))))))
-
-    (reset! filler
-      (JLabel. ""))
-
-    (reset! root
-      (doto (proxy [JPanel ISearchPanel] []
-              (setFocus []
-                (. @find-textbox requestFocusInWindow))
-              (getSearchContext [] context)
-              (getTextPane []
-                text-pane)
-              (isReplace []
-                (. @replace-textbox isVisible))
-              (setReplace [replace]
-                (. @replace-caption setVisible replace)
-                (. @replace-textbox setVisible replace))
-              (getSelectionStart []
-                selection-start)
-              (getSelectionEnd []
-                selection-end)
-              (isSelectionOnly []
-                (< selection-start selection-end))
-              (setSelectionOnly [selection]
-                (. @selection-check setSelected true))
-              (getHighlightTags []
-                highlight-tags))
-        (.setLayout (GridBagLayout.))
-        (grid-bag-layout
-          :anchor :WEST
-          :gridy 0 :gridx 0 :weightx 0.0
-          @find-caption
-          :gridy 0 :gridx 1 :weightx 1.0 :fill :HORIZONTAL
-          @find-textbox
-          :gridy 0 :gridx 2 :weightx 0.0
-          @match-case-check
-          :gridy 0 :gridx 3 :weightx 0.0
-          @regular-check
-          :gridy 0 :gridx 4 :weightx 0.0
-          @selection-check
-          :gridy 0 :gridx 5 :weightx 0.0
-          @filler
-          :gridy 1 :gridx 0 :weightx 0.0
-          @replace-caption
-          :gridy 1 :gridx 1 :weightx 1.0 :fill :HORIZONTAL
-          @replace-textbox)
-        ; (.setFocusTraversalPolicy @policy)
-        ))
-    @root))
 
 
 ;	String text = context.getSearchFor();
@@ -443,9 +303,10 @@
                     total-end-pos     (+ total-start-pos (count search-for))
                     next-offset (+ total-start-pos 1)]
                 (recur next-offset (cons (Point. total-start-pos total-end-pos) result))))))))
-          
+
 (defn get-find-positions
-  [search-panel]
+  [search-panel & term]
+  (assert (or (nil? term) (= (count term) 2)))
   (let [context     (. search-panel getSearchContext)
         search-for  (. context getSearchFor)
         forward?    true
@@ -454,8 +315,12 @@
         regular?    (. context isRegularExpression)
         selection?  (. search-panel isSelectionOnly)
         text-pane   (. search-panel getTextPane)
-        start       (if selection? (. text-pane getSelectionStart) 0)
-        end         (if selection? (. text-pane getSelectionEnd) (.. text-pane getDocument getLength))]
+        start       (if (nil? term)
+                        (if selection? (. text-pane getSelectionStart) 0)
+                        ((vec term) 0))
+        end         (if (nil? term)
+                        (if selection? (. text-pane getSelectionEnd) (.. text-pane getDocument getLength))
+                        ((vec term) 1))]
     (if regular?
         (get-find-regex-positions text-pane start end search-for match-case? whole-word?)
         (get-find-normal-positions text-pane start end search-for match-case? whole-word?))))
@@ -476,9 +341,10 @@
     (if (not (nil? next-pos))
         (. text-pane setCaretPosition next-pos))))
 
-(defn find-normal
-  [search-panel forward?]
-  (let [context        (. search-panel getSearchContext)
+(defaction find-operate
+  [find-textbox]
+  (let [search-panel   (. find-textbox getParent)
+        context        (. search-panel getSearchContext)
         highlight-tags (. search-panel getHighlightTags)
         text-pane      (. search-panel getTextPane)
         highlighter    (. text-pane getHighlighter)
@@ -490,22 +356,7 @@
     (doseq [pos positions]
       (let [new-tag (. highlighter addHighlight (. pos getX) (. pos getY) matched-painter)]
         (. highlight-tags add new-tag)))
-    (move-sbling-highlight-pos search-panel forward?)))
-
-
-(defn operate [textbox forward?]
-  (let [search-panel   (. textbox getParent)
-        context        (. search-panel getSearchContext)
-        text-pane      (. search-panel getTextPane)]
-    (if (. search-panel isReplace)
-        (println "replace:" (SearchEngine/replace text-pane context)))
-        (find-normal search-panel forward?)))
-
-(defaction operate-forward [textbox]
-  (operate textbox true))
-
-(defaction operate-backword [textbox]
-  (operate textbox false))
+    (move-sbling-highlight-pos search-panel true)))
 
 (defaction hide [find-textbox]
   (println "Hide search-panel.")
@@ -514,8 +365,183 @@
       (let [search-panel (. find-textbox getParent)
             sub-panel    (. search-panel getParent)
             root-panel   (. sub-panel getParent)]
-        (. sub-panel setVisible false)
+        (. search-panel setVisible false)
         (. root-panel setFocus))))
+
+(declare print-highlights)
+(declare refresh-highlights)
+(defn make-search-panel
+  [text-pane]
+  (let [improved-imr     (atom nil)
+        ime-mode         (atom nil)
+        find-um          (UndoManager.)
+        replace-um       (UndoManager.)
+        is-marked        (atom false)
+        find-caption     (atom nil)
+        find-textbox     (atom nil)
+        replace-caption  (atom nil)
+        replace-textbox  (atom nil)
+        match-case-check (atom nil)
+        regular-check    (atom nil)
+        selection-check  (atom nil)
+        filler           (atom nil)
+        root             (atom nil)
+        policy           (atom nil)
+        default-map      (. editor/single-line-maps get "default")
+        context          (SearchContext.)
+        selection-start  (. text-pane getSelectionStart)
+        selection-end    (. text-pane getSelectionEnd)
+        highlight-tags   (ArrayList.)
+        ]
+
+    (println "==========")
+    (println "Selection start :" selection-start)
+    (println "          end   :" selection-end)
+
+    (doto (. text-pane getDocument)
+      (.addDocumentListener
+        (proxy [DocumentListener] []
+          (changedUpdate [evt])
+          (insertUpdate [evt]
+            (let [start-line   (editor/get-line-element text-pane (editor/get-line-index text-pane (. evt getOffset)))
+                  end-line     (editor/get-line-element text-pane (editor/get-line-index text-pane (+ (. evt getOffset) (. evt getLength))))
+                  region-start (. start-line getStartOffset)
+                  region-end   (. end-line getEndOffset)]
+              (refresh-highlights text-pane region-start region-end)))
+          (removeUpdate [evt]
+            (let [start-line   (editor/get-line-element text-pane (editor/get-line-index text-pane (. evt getOffset)))
+                  end-line     (editor/get-line-element text-pane (editor/get-line-index text-pane (+ (. evt getOffset) (. evt getLength))))
+                  region-start (. start-line getStartOffset)
+                  region-end   (. end-line getEndOffset)]
+              (refresh-highlights text-pane region-start region-end))))))
+
+    (reset! find-caption
+      (JLabel. "Find:"))
+
+    (reset! find-textbox
+      (doto (make-textbox text-pane improved-imr ime-mode find-um is-marked
+                          find-caption find-textbox
+                          replace-caption replace-textbox
+                          match-case-check regular-check
+                          filler root policy default-map)
+        (.setFocusAccelerator \F)
+        (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
+        (.setActionMap (. default-map getActionMap))))
+
+    (doto (. @find-textbox getDocument)
+      (.addUndoableEditListener find-um)
+      (.addDocumentListener
+        (proxy [DocumentListener] []
+          (changedUpdate [evt])
+          (insertUpdate [evt] (. context setSearchFor (. @find-textbox getText)))
+          (removeUpdate [evt] (. context setSearchFor (. @find-textbox getText))))))
+
+    (reset! replace-caption (JLabel. "Replace:"))
+
+    (reset! replace-textbox
+      (doto (make-textbox text-pane improved-imr ime-mode replace-um is-marked
+                          find-caption find-textbox
+                          replace-caption replace-textbox
+                          match-case-check regular-check
+                          filler root policy default-map)
+        (.setFocusAccelerator \R)
+        (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
+        (.setActionMap (. default-map getActionMap))))
+
+    (doto (. @replace-textbox getDocument)
+      (.addUndoableEditListener replace-um)
+      (.addDocumentListener
+        (proxy [DocumentListener] []
+          (changedUpdate [evt])
+          (insertUpdate [evt] (. context setReplaceWith (. @replace-textbox getText)))
+          (removeUpdate [evt] (. context setReplaceWith (. @replace-textbox getText))))))
+
+    (reset! match-case-check
+      (doto (JCheckBox. "Match Case  " false)
+        (.setMnemonic (keys/normal-keys 'm))
+        (.addActionListener
+          (proxy [ActionListener] []
+            (actionPerformed [evt]
+              (println "Match Case:" (. @match-case-check isSelected))
+              (. context setMatchCase (. @match-case-check isSelected)))))))
+
+    (reset! regular-check
+      (doto (JCheckBox. "Regular Expression  " false)
+        (.setMnemonic (keys/normal-keys 'e))
+        (.addActionListener
+          (proxy [ActionListener] []
+            (actionPerformed [evt]
+              (println "Regular Expression:" (. @regular-check isSelected))
+              (. context setRegularExpression (. @regular-check isSelected)))))))
+
+    (reset! selection-check
+      (doto (JCheckBox. "In selection  " (< selection-start selection-end))
+        (.setMnemonic (keys/normal-keys 's))
+        (.addActionListener
+          (proxy [ActionListener] []
+            (actionPerformed [evt]
+              (println "In Selection:" (. @selection-check isSelected))
+              (. context setSearchSelectionOnly (. @selection-check isSelected)))))))
+
+    (reset! filler
+      (JLabel. ""))
+
+    (reset! root
+      (doto (proxy [JPanel ISearchPanel] []
+              (setFocus []
+                (. @find-textbox requestFocusInWindow))
+              (getSearchContext [] context)
+              (getTextPane []
+                text-pane)
+              (isReplace []
+                (. @replace-textbox isVisible))
+              (setReplace [replace]
+                (. @replace-caption setVisible replace)
+                (. @replace-textbox setVisible replace))
+              (getSelectionStart []
+                (. text-pane getSelectionStart))
+              (getSelectionEnd []
+                (. text-pane getSelectionEnd))
+              (isSelectionOnly []
+                (. @selection-check isSelected))
+              (setSelectionOnly [selection]
+                (. @selection-check setSelected selection))
+              (getHighlightTags []
+                highlight-tags))
+        (.setLayout (GridBagLayout.))
+        (.addComponentListener (proxy [ComponentListener] []
+                                 (componentHidden [evt])
+                                 (componentMoved [evt])
+                                 (componentResized [evt])
+                                 (componentShown [evt]
+                                   (let [start      (. text-pane getSelectionStart)
+                                         end        (. text-pane getSelectionEnd)
+                                         selection? (< start end)]
+                                     (println (format "start: %d, end: %d, selection?:" start end) selection?)
+                                     (doto @selection-check 
+                                       (.setEnabled selection?)
+                                       (.setSelected selection?))))))
+        (grid-bag-layout
+          :anchor :WEST
+          :gridy 0 :gridx 0 :weightx 0.0
+          @find-caption
+          :gridy 0 :gridx 1 :weightx 1.0 :fill :HORIZONTAL
+          @find-textbox
+          :gridy 0 :gridx 2 :weightx 0.0
+          @match-case-check
+          :gridy 0 :gridx 3 :weightx 0.0
+          @regular-check
+          :gridy 0 :gridx 4 :weightx 0.0
+          @selection-check
+          :gridy 0 :gridx 5 :weightx 0.0
+          @filler
+          :gridy 1 :gridx 0 :weightx 0.0
+          @replace-caption
+          :gridy 1 :gridx 1 :weightx 1.0 :fill :HORIZONTAL
+          @replace-textbox)
+        ; (.setFocusTraversalPolicy @policy)
+        ))
+    @root))
 
 (defn get-search-panel
   [text-pane]
@@ -527,18 +553,51 @@
           tmp-panel)
         search-panel)))
 
-(defaction show-find [text-pane]
+(defn print-highlights
+  [text-pane]
+  (let [search-panel   (get-search-panel text-pane)
+        highlight-tags (. search-panel getHighlightTags)]
+    (doseq [highlight-tag highlight-tags]
+      (let [start (. highlight-tag getStartOffset)
+            end   (. highlight-tag getEndOffset)
+            value (. text-pane getText start (- end start))]
+       (println (format "start: %d, end: %d, [%s]" start end value))))))
+
+(defn refresh-highlights
+  [text-pane region-start region-end]
+  (let [highlighter    (. text-pane getHighlighter)
+        search-panel   (get-search-panel text-pane)
+        highlight-tags (. search-panel getHighlightTags)
+        remove-targets (filter #(let [highlight-tag %1
+                                      start         (. highlight-tag getStartOffset)
+                                      end           (. highlight-tag getEndOffset)]
+                                  (or (<= region-start start region-end)
+                                      (<= region-start end   region-end)))
+                               highlight-tags)]
+
+    ; remove highlights in region
+    (doseq [highlight-tag remove-targets]
+      (. highlighter removeHighlight highlight-tag))
+    (doseq [highlight-tag remove-targets]
+      (. highlight-tags remove highlight-tag))
+
+    ; add new highlights
+    (doseq [pos (get-find-positions search-panel region-start region-end)]
+      (let [new-tag (. highlighter addHighlight (. pos getX) (. pos getY) matched-painter)]
+        (. highlight-tags add new-tag)))))
+
+(defaction show-as-find [text-pane]
   (let [root-panel   (. text-pane getRoot)
         search-panel (get-search-panel text-pane)]
     (. search-panel setReplace false)
-    (. search-panel setSelectionOnly (< 0 (. text-pane getSelectionEnd)))
-    (. root-panel showSubPanel search-panel)))
+    (. search-panel setVisible true)
+    (. search-panel setFocus)))
 
-(defaction find-next-from-by-search-panel [textbox]
+(defaction find-next-in-search-panel [textbox]
   (let [search-panel (. textbox getParent)]
     (move-sbling-highlight-pos search-panel true)))
 
-(defaction find-prev-from-by-search-panel [textbox]
+(defaction find-prev-in-search-panel [textbox]
   (let [search-panel (. textbox getParent)]
     (move-sbling-highlight-pos search-panel false)))
 
@@ -550,10 +609,12 @@
   (let [search-panel (get-search-panel text-pane)]
     (move-sbling-highlight-pos search-panel false)))
 
-(defaction show-replace [text-pane]
+(defaction show-as-replace [text-pane]
   (let [root-panel   (. text-pane getRoot)
         search-panel (get-search-panel text-pane)]
     (. search-panel setReplace true)
-    (. search-panel setSelectionOnly (< 0 (. text-pane getSelectionEnd)))
-    (. root-panel showSubPanel search-panel)))
+    (. search-panel setVisible true)
+    (. search-panel setFocus)))
+
+
 
