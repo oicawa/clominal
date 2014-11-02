@@ -172,10 +172,6 @@
         ; Others
         ;
         default-map   (. multi-line-maps get "default")
-        default-fonts {:linux   ;["Takaoゴシック" Font/PLAIN 14]
-                                ["YOzFontCF" Font/PLAIN 16]
-                                ;["Migu 1M" Font/PLAIN 14]
-                       :windows ["ＭＳ ゴシック" Font/PLAIN 14]}
         ]
     ;
     ; Editor Area
@@ -229,7 +225,7 @@
       (.setActionMap (. default-map getActionMap))
       (.enableInputMethods true)
       (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_NONE)
-      (.setSyntaxScheme (SyntaxScheme. (Font. "YOzFontCF" Font/PLAIN 16) false))
+      (.setSyntaxScheme (SyntaxScheme. default-font false))
       (.setTabSize 4)
       (.setPaintTabLines true)
       )
@@ -331,8 +327,9 @@
         :weighty 0.0
         :gridy 2
         statusbar))
-    (doseq [component [@text-pane keystrokes char-code]]
-      (set-font component (default-fonts (get-os-keyword))))
+    
+    (. keystrokes setFont default-font)
+    (. char-code setFont default-font)
 
     @root-panel
     ))
@@ -554,7 +551,7 @@
 
 (defn file-set
   [tabs file]
-  (doto (make-editor tabs)
+  (doto (make-editor tabs )
     (.load file)
     (.setFocus)))
       

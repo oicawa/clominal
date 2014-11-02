@@ -82,10 +82,8 @@
       (.setName "console")
       (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
       (.setActionMap (. default-map getActionMap))
-      (.setEditable true))
-
-    (doseq [component [console]]
-      (set-font component (default-fonts (get-os-keyword))))
+      (.setEditable true)
+      (.setFont default-font))
 
     (doto root
       ;(.setToSystemOut)

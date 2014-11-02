@@ -151,17 +151,11 @@
 ;
 ; Font utilities
 ;
+(def default-font (Font. Font/MONOSPACED Font/PLAIN 14))
+
 (defn get-font-names
   []
   (.. GraphicsEnvironment getLocalGraphicsEnvironment getAvailableFontFamilyNames))
-
-(defn set-font
-  [component parameters]
-  (let [name (parameters 0)
-        type (parameters 1)
-        size (parameters 2)]
-    (. component setFont (Font. name type size))))
-
 
 (defn get-frame
   [component]
