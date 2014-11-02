@@ -19,7 +19,7 @@
            (javax.swing.undo UndoManager)
            (java.io File FileInputStream FileWriter FileNotFoundException StringReader)
            (clojure.lang LineNumberingPushbackReader LispReader)
-           (org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants TextEditorPane FileLocation Token RSyntaxUtilities)
+           (org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants TextEditorPane FileLocation Token RSyntaxUtilities SyntaxScheme)
            (org.fife.ui.rtextarea RTextScrollPane)
            (clominal.utils IMarkable IAppPane)
            (clominal.keys IKeybindComponent)))
@@ -118,7 +118,7 @@
   [text-pane]
   (println "apply-editor-mode")
   (let [ext              (get-extension (. text-pane getFileFullPath))
-        namespace-name   (format "mode.%s_mode" ext)
+        namespace-name   (format "plugins.mode.%s_mode" ext)
         init-mode-symbol (symbol namespace-name "init-mode")
         ]
     (if (try
@@ -132,8 +132,9 @@
   (let [file-location    (FileLocation/create (. file getAbsolutePath))
         file-name        (. file getName)
         ext              (get-extension file-name)
-        namespace-name   (format "mode.%s_mode" ext)
+        namespace-name   (format "plugins.mode.%s_mode" ext)
         init-mode-symbol (symbol namespace-name "init-mode")]
+    (println namespace-name)
     (try
       (require (symbol namespace-name))
       (apply (find-var init-mode-symbol) [text-pane])
@@ -173,6 +174,7 @@
         default-map   (. multi-line-maps get "default")
         default-fonts {:linux   ;["Takaoゴシック" Font/PLAIN 14]
                                 ["YOzFontCF" Font/PLAIN 16]
+                                ;["Migu 1M" Font/PLAIN 14]
                        :windows ["ＭＳ ゴシック" Font/PLAIN 14]}
         ]
     ;
@@ -227,6 +229,7 @@
       (.setActionMap (. default-map getActionMap))
       (.enableInputMethods true)
       (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_NONE)
+      (.setSyntaxScheme (SyntaxScheme. (Font. "YOzFontCF" Font/PLAIN 16) false))
       (.setTabSize 4)
       (.setPaintTabLines true)
       )

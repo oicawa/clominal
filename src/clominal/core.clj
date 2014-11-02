@@ -13,7 +13,7 @@
      (println "?=" res#)
      res#))
 
-(defn main [& args]
+(defn -main [& args]
   (SwingUtilities/invokeLater
     #(let [max  (count args)
            mode (if (= 0 max) nil ((vec args) 0))
@@ -21,4 +21,3 @@
        (reset! *frame* (frame/make-frame mode))
        (. @*frame* setVisible true))))
 
-(main "d")

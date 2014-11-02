@@ -1,4 +1,4 @@
-(ns mode.clj_mode
+(ns plugins.mode.js_mode
   (:import (clojure.lang LineNumberingPushbackReader LispReader)
            (java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
            (java.awt.event ActionEvent)
@@ -20,7 +20,7 @@
   (:require [clominal.editors.editor :as editor])
   (:use [clominal.utils]))
 
-(def mode-name "clojure-mode")
+(def mode-name "javascript-mode")
 
 
 ;; ------------------------------
@@ -279,7 +279,7 @@
 
 (defn init-mode
   [text-pane]
-  (println "[clojure-mode] Loading ...")
+  (println "[javascript-mode] Loading ...")
   ; keybinds
   (let [settings {
                    '(Ctrl Alt h) backward-s-expression
@@ -293,9 +293,9 @@
             action  (setting 1)]
         (keys/define-keybind editor/multi-line-maps keybind action))))
   (doto text-pane
-    (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_CLOJURE)
+    (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_JAVASCRIPT)
     (.setEncoding "UTF-8"))
-  (println "[clojure-mode] Loading completed."))
+  (println "[javascript-mode] Loading completed."))
 
 
 

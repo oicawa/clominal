@@ -10,7 +10,6 @@
 ;; Custom key binds
 ;;
 ;;------------------------------
-
 (def editor-keybind-settings
   {
    '(Ctrl h) editor/backward-char
