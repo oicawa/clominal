@@ -12,6 +12,7 @@
            )
   (:require [clominal.editors.editor :as editor]
             [clominal.keys :as keys]
+            [clominal.config :as config]
             [clominal.console :as console]))
 
 
@@ -75,6 +76,15 @@
 (definterface IFrame
   (showConsole []))
 
+(defn save-frame-prop
+  [frame]
+  (let [rect (. frame getBounds)]
+    (config/set-prop :frame :x (. rect x))
+    (config/set-prop :frame :y (. rect y))
+    (config/set-prop :frame :width (. rect width))
+    (config/set-prop :frame :height (. rect height))
+    (config/save-prop)))
+
 (defn make-frame
   "Create clominal main frame."
   [mode]
@@ -118,11 +128,14 @@
         close-option (if (= mode "d")
                          JFrame/DISPOSE_ON_CLOSE
                          JFrame/EXIT_ON_CLOSE)
-        screen-size  (. (Toolkit/getDefaultToolkit) getScreenSize)
-        frame-height (* (. screen-size height) 0.9)
-        frame-width  (if (< (. screen-size width) 800)
-                         (. screen-size width)
-                         800)]
+        ;screen-size  (. (Toolkit/getDefaultToolkit) getScreenSize)
+        ;frame-height (* (. screen-size height) 0.9)
+        ;frame-height ((@*properties* :frame) :height)
+        ;frame-width  (if (< (. screen-size width) 800)
+        ;                 (. screen-size width)
+        ;                 800)
+        ;frame-width  ((@*properties* :frame) :width)
+        ]
     ;;
     ;; InputMap & ActionMap
     ;;
@@ -145,9 +158,13 @@
     (doto frame
       (.setTitle "clominal")
       (.setDefaultCloseOperation WindowConstants/DO_NOTHING_ON_CLOSE)
-      (.setSize frame-width frame-height)
-      (.setLocationRelativeTo nil)
-      ;(.add tabs)
+      ;(.setSize frame-width frame-height)
+      ;(.setLocationRelativeTo nil)
+      (.setBounds ;(->> @*properties* :frame :x)
+                  (config/get-prop :frame :x)
+                  (config/get-prop :frame :y)
+                  (config/get-prop :frame :width)
+                  (config/get-prop :frame :height))
       (.setLayout (GridBagLayout.))
       (grid-bag-layout
         :fill :BOTH
@@ -162,14 +179,18 @@
                                     (. @exception printStackTrace))))
                             (windowClosing [evt]
                               (if (= '() (get-confirm-to-close-tabs tabs))
-                                  (. frame dispose)
+                                  (do
+                                    (save-frame-prop frame)
+                                    (. frame dispose))
                                   (let [option (JOptionPane/showConfirmDialog
                                                  frame 
                                                  "There are some unsaved documents.\nWould you save these modified documents?")]
                                     (cond (= option JOptionPane/YES_OPTION)
                                             nil
                                           (= option JOptionPane/NO_OPTION)
-                                            (. frame dispose)
+                                            (do
+                                              (save-frame-prop frame)
+                                              (. frame dispose))
                                           :else
                                             nil))))
                             (windowClosed [evt]

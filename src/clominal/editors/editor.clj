@@ -563,7 +563,9 @@
   [tabs]
   (println "File Open")
   (let [panel   (. tabs getCurrentPanel)
-        path    (if (= nil panel) home-directory-path (. panel getFileFullPath))
+        path    (if (= nil panel)
+                    home-directory-path
+                    (. panel getFileFullPath))
         chooser (JFileChooser. path)
         result  (. chooser showOpenDialog nil)]
     (if (= JFileChooser/APPROVE_OPTION result)

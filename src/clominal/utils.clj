@@ -148,6 +148,10 @@
         (string/join os-file-separator (cons (System/getProperty "user.home") body))
         (. (File. path) getAbsolutePath))))
 
+(defn append-path
+  [base-path added-path]
+  (str base-path os-file-separator added-path))
+
 ;
 ; Font utilities
 ;

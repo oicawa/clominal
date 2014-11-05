@@ -3,9 +3,11 @@
 (javax.swing.UIManager/setLookAndFeel "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
 
 (ns clominal.core
-  (:require [clominal.frame :as frame])
+  (:require [clominal.frame :as frame]
+            [clominal.config :as config])
   (:use     [clominal.utils])
-  (:import (javax.swing SwingUtilities)))
+  (:import (java.io File)
+           (javax.swing SwingUtilities)))
 
 (defn debug-print
   [x]
@@ -13,7 +15,12 @@
      (println "?=" res#)
      res#))
 
+(defn init
+  []
+  (config/init))
+
 (defn -main [& args]
+  (init)
   (SwingUtilities/invokeLater
     #(let [max  (count args)
            mode (if (= 0 max) nil ((vec args) 0))

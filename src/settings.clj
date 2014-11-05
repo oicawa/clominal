@@ -132,3 +132,22 @@
         action  (setting 1)]
     (keys/define-keybind frame/maps keybind action)))
 
+(def ^{:dynamic true} *config* (atom nil))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
