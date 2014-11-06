@@ -2,7 +2,8 @@
   (:use [clojure.contrib.def]
         [clominal.utils]
         [clominal.dialog])
-  (:import (javax.swing JComponent JFrame JTabbedPane JTextArea JButton ImageIcon JPanel JTextField JList
+  (:import (java.io File)
+           (javax.swing JComponent JFrame JTabbedPane JTextArea JButton ImageIcon JPanel JTextField JList
                         WindowConstants AbstractAction KeyStroke JOptionPane JScrollPane SwingUtilities)
            (javax.swing.event DocumentListener)
            ;(java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
@@ -76,13 +77,16 @@
 (definterface IFrame
   (showConsole []))
 
-(defn save-frame-prop
-  [frame]
+(defn save-prop
+  [frame tabs]
   (let [rect (. frame getBounds)]
+    ; frame
     (config/set-prop :frame :x (. rect x))
     (config/set-prop :frame :y (. rect y))
     (config/set-prop :frame :width (. rect width))
     (config/set-prop :frame :height (. rect height))
+    ; tabs
+    (config/set-prop :tabs :info (. tabs getInfoList))
     (config/save-prop)))
 
 (defn make-frame
@@ -96,6 +100,15 @@
                            (if (< index 0)
                                nil
                                (. this getComponentAt index))))
+                       (getInfoList []
+                         (loop [index     (- (. this getTabCount) 1)
+                                tabs-info []]
+                           (println "index =" index)
+                           (if (< index 0)
+                               tabs-info
+                               (let [app (. this getComponentAt index)]
+                                 (println "app =" app)
+                                 (recur (- index 1) (cons (. app getInfo) tabs-info))))))
                        (setImeEnable [value])
                        (setInputMap [inputmap]
                          (. this setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW inputmap))
@@ -112,7 +125,9 @@
                                                           (canClose [] true)
                                                           (getTabs [] tabs)
                                                           (getTabIndex []
-                                                            (. tabs indexOfComponent this)))]
+                                                            (. tabs indexOfComponent this))
+                                                          (getInfo [] { :generator clominal.console/make-console :id nil })
+                                                          (open [id] nil))]
                                       (doto console-panel
                                         (.setLayout (GridBagLayout.))
                                         (.setName "console-panel")
@@ -127,15 +142,7 @@
                                     (recur (+ i 1)))))))
         close-option (if (= mode "d")
                          JFrame/DISPOSE_ON_CLOSE
-                         JFrame/EXIT_ON_CLOSE)
-        ;screen-size  (. (Toolkit/getDefaultToolkit) getScreenSize)
-        ;frame-height (* (. screen-size height) 0.9)
-        ;frame-height ((@*properties* :frame) :height)
-        ;frame-width  (if (< (. screen-size width) 800)
-        ;                 (. screen-size width)
-        ;                 800)
-        ;frame-width  ((@*properties* :frame) :width)
-        ]
+                         JFrame/EXIT_ON_CLOSE)]
     ;;
     ;; InputMap & ActionMap
     ;;
@@ -158,10 +165,7 @@
     (doto frame
       (.setTitle "clominal")
       (.setDefaultCloseOperation WindowConstants/DO_NOTHING_ON_CLOSE)
-      ;(.setSize frame-width frame-height)
-      ;(.setLocationRelativeTo nil)
-      (.setBounds ;(->> @*properties* :frame :x)
-                  (config/get-prop :frame :x)
+      (.setBounds (config/get-prop :frame :x)
                   (config/get-prop :frame :y)
                   (config/get-prop :frame :width)
                   (config/get-prop :frame :height))
@@ -176,11 +180,14 @@
                               (if (not (nil? @exception))
                                   (do
                                     (println "Exception occured.")
-                                    (. @exception printStackTrace))))
+                                    (. @exception printStackTrace)))
+                              (let [tabs-info (config/get-prop :tabs :info)]
+                                (doseq [info tabs-info]
+                                  (editor/file-set tabs (File. (info :id))))))
                             (windowClosing [evt]
                               (if (= '() (get-confirm-to-close-tabs tabs))
                                   (do
-                                    (save-frame-prop frame)
+                                    (save-prop frame tabs)
                                     (. frame dispose))
                                   (let [option (JOptionPane/showConfirmDialog
                                                  frame 
@@ -189,7 +196,7 @@
                                             nil
                                           (= option JOptionPane/NO_OPTION)
                                             (do
-                                              (save-frame-prop frame)
+                                              (save-prop frame tabs)
                                               (. frame dispose))
                                           :else
                                             nil))))

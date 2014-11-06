@@ -30,7 +30,8 @@
 ;;
 
 (definterface ITabbedPane
-  (getCurrentPanel []))
+  (getCurrentPanel [])
+  (getInfoList []))
 
 (definterface IMarkable
   (isMark [])
@@ -39,7 +40,9 @@
 (definterface IAppPane
   (canClose [])
   (getTabs [])
-  (getTabIndex []))
+  (getTabIndex [])
+  (getInfo [])
+  (open [id]))
 
 
 (defn add-component

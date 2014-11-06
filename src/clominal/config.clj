@@ -1,6 +1,7 @@
 (ns clominal.config
-  (:use [clominal.utils])
-  (:import [java.io File]
+  (:use [clominal.utils]
+        [clojure.pprint :only (pprint)])
+  (:import [java.io File StringWriter]
            [java.awt Toolkit]))
 
 (def ^{:dynamic true} *properties* (atom nil))
@@ -57,8 +58,10 @@
 (defn save-prop
   []
   (let [config-dir-path (get-config-dir-path)
-        properties-path (get-properties-file-path config-dir-path)]
-    (spit properties-path @*properties*)))
+        properties-path (get-properties-file-path config-dir-path)
+        writer          (StringWriter.)]
+    (pprint @*properties* writer)
+    (spit properties-path (. writer toString))))
 
 (defn init
   []

@@ -275,6 +275,8 @@
                          (canClose [] (not (. @text-pane isDirty)))
                          (getTabs [] tabs)
                          (getTabIndex [] (. tabs indexOfComponent this))
+                         (getInfo [] { :generator 'clominal.editors.editor/make-editor :id (. @text-pane getFileFullPath) })
+                         (open [id] (load (File. id)))
                          (load [file]
                            (. tabs addTab nil this)
                            (let [index (. this getTabIndex)]
@@ -551,7 +553,7 @@
 
 (defn file-set
   [tabs file]
-  (doto (make-editor tabs )
+  (doto (make-editor tabs)
     (.load file)
     (.setFocus)))
       
