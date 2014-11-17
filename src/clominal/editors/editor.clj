@@ -134,7 +134,6 @@
         ext              (get-extension file-name)
         namespace-name   (format "plugins.mode.%s_mode" ext)
         init-mode-symbol (symbol namespace-name "init-mode")]
-    (println namespace-name)
     (try
       (require (symbol namespace-name))
       (apply (find-var init-mode-symbol) [text-pane])
@@ -227,8 +226,7 @@
       (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_NONE)
       (.setSyntaxScheme (SyntaxScheme. default-font false))
       (.setTabSize 4)
-      (.setPaintTabLines true)
-      )
+      (.setPaintTabLines true))
 
     (doto (. @text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
@@ -276,9 +274,8 @@
                          (getTabs [] tabs)
                          (getTabIndex [] (. tabs indexOfComponent this))
                          (getInfo [] { :generator 'clominal.editors.editor/make-editor :id (. @text-pane getFileFullPath) })
-                         (open [id] (load (File. id)))
+                         (open [id] (. this load (File. id)))
                          (load [file]
-                           (. tabs addTab nil this)
                            (let [index (. this getTabIndex)]
                              (. tabs setSelectedIndex index)
                              (if (nil? file)
@@ -553,9 +550,11 @@
 
 (defn file-set
   [tabs file]
-  (doto (make-editor tabs)
-    (.load file)
-    (.setFocus)))
+  (let [editor (make-editor tabs)]
+    (. tabs addTab nil editor)
+    (doto editor
+      (.load file)
+      (.setFocus))))
       
 (defaction file-new
   [tabs]

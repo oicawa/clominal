@@ -4,7 +4,7 @@
   (:import [java.io File StringWriter]
            [java.awt Toolkit]))
 
-(def ^{:dynamic true} *properties* (atom nil))
+(def ^{:dynamic true :private true} *properties* (atom nil))
 
 (defn- get-config-dir-path
   []
@@ -67,11 +67,7 @@
   []
   (let [config-dir-path (get-config-dir-path)
         properties-path (get-properties-file-path config-dir-path)]
-    (println config-dir-path)
-    (println properties-path)
-    
-    (reset! *properties* (read-string (slurp properties-path)))
-    (println @*properties*)))
+    (reset! *properties* (read-string (slurp properties-path)))))
 
 
 

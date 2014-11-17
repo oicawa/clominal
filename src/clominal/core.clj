@@ -12,6 +12,7 @@
 (defn debug-print
   [x]
   `(let [res# ~x]
+     ;(println "?=" (quote ~x))
      (println "?=" res#)
      res#))
 

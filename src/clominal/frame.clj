@@ -3,20 +3,17 @@
         [clominal.utils]
         [clominal.dialog])
   (:import (java.io File)
-           (javax.swing JComponent JFrame JTabbedPane JTextArea JButton ImageIcon JPanel JTextField JList
-                        WindowConstants AbstractAction KeyStroke JOptionPane JScrollPane SwingUtilities)
+           (javax.swing JComponent JFrame JTabbedPane JTextArea JButton ImageIcon JPanel JTextField JList JLabel
+                        WindowConstants AbstractAction KeyStroke JOptionPane JScrollPane SwingUtilities BorderFactory)
            (javax.swing.event DocumentListener)
-           ;(java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
-           (java.awt Toolkit GridBagLayout Font)
-           (java.awt.event InputEvent KeyEvent WindowAdapter)
+           (java.awt Toolkit Dimension GridBagLayout BorderLayout Font)
+           (java.awt.event InputEvent KeyEvent WindowAdapter ActionListener)
            (clominal.utils ITabbedPane IAppPane)
            )
   (:require [clominal.editors.editor :as editor]
             [clominal.keys :as keys]
             [clominal.config :as config]
             [clominal.console :as console]))
-
-
 
 ;;
 ;; Actions
@@ -87,7 +84,39 @@
     (config/set-prop :frame :height (. rect height))
     ; tabs
     (config/set-prop :tabs :info (. tabs getInfoList))
+    (config/set-prop :tabs :index (. tabs getSelectedIndex))
     (config/save-prop)))
+
+(definterface ITabPanel
+  (setTitle [title])
+  (getTitle [])
+  (addCloseButtonListener [proc]))
+(defn- make-tab
+  [tabs]
+  (let [label  (doto (JLabel.)
+                 (.setBorder (BorderFactory/createEmptyBorder 0 0 0 4)))
+        icon   (ImageIcon. "./resources/window-close.png")
+        size   (Dimension. (. icon getIconWidth) (. icon getIconHeight))
+        button (doto (JButton. icon)
+                 (.setPreferredSize size))
+        tab    (proxy [JPanel ITabPanel] []
+                 (setTitle [title]
+                   (. label setText title))
+                 (getTitle []
+                   (. label getText))
+                 (addCloseButtonListener [proc]
+                   (doto button
+                     (.setPreferredSize size)
+                     (.addActionListener (proxy [ActionListener] []
+                                           (actionPerformed [e]
+                                             (proc e)))))))]
+    (. tabs setTabComponentAt (- (. tabs getTabCount) 1) tab)
+    (doto tab
+      (.setLayout (BorderLayout.))
+      (.setOpaque false)
+      (.add label BorderLayout/WEST)
+      (.add button BorderLayout/EAST)
+      (.setBorder (BorderFactory/createEmptyBorder 2 1 1 1)))))
 
 (defn make-frame
   "Create clominal main frame."
@@ -103,42 +132,37 @@
                        (getInfoList []
                          (loop [index     (- (. this getTabCount) 1)
                                 tabs-info []]
-                           (println "index =" index)
                            (if (< index 0)
                                tabs-info
                                (let [app (. this getComponentAt index)]
-                                 (println "app =" app)
                                  (recur (- index 1) (cons (. app getInfo) tabs-info))))))
                        (setImeEnable [value])
                        (setInputMap [inputmap]
                          (. this setInputMap JComponent/WHEN_IN_FOCUSED_WINDOW inputmap))
                        (setActionMap [actionmap]
                          (proxy-super setActionMap actionmap))
-                       (setKeyStroke [keystroke]))
-        console      (console/make-console)
+                       (setKeyStroke [keystroke])
+                       (addTab [title content]
+                         (proxy-super addTab nil content)
+                         (let [tab (doto (make-tab this)
+                                     (.addCloseButtonListener
+                                       (fn [e]
+                                         (. this removeTabAt (. this indexOfComponent content))))
+                                     (.setTitle title))]
+                           (. this setTabComponentAt (- (. this getTabCount) 1) tab)))
+                       (setTitleAt [index title]
+                         (let [tab (. this getTabComponentAt index)]
+                           (. tab setTitle title))))
+        console      (console/make-console tabs)
         frame        (proxy [JFrame IFrame] []
                        (showConsole []
                          (let [max-index (- (. tabs getTabCount) 1)]
                            (loop [i 0]
                              (cond (< max-index i)
-                                    (let [console-panel (proxy [JPanel IAppPane] []
-                                                          (canClose [] true)
-                                                          (getTabs [] tabs)
-                                                          (getTabIndex []
-                                                            (. tabs indexOfComponent this))
-                                                          (getInfo [] { :generator clominal.console/make-console :id nil })
-                                                          (open [id] nil))]
-                                      (doto console-panel
-                                        (.setLayout (GridBagLayout.))
-                                        (.setName "console-panel")
-                                        (grid-bag-layout
-                                          :fill :BOTH
-                                          :gridx 0 :gridy 0 :weightx 1.0 :weighty 1.0
-                                          console))
-                                      (add-component tabs console/console-title console-panel))
-                                  (= console/console-title (. tabs getTitleAt i))
+                                    (add-component tabs console/console-title console)
+                                   (= console/console-title (. tabs getTitleAt i))
                                     (. tabs setSelectedIndex i)
-                                  :else
+                                   :else
                                     (recur (+ i 1)))))))
         close-option (if (= mode "d")
                          JFrame/DISPOSE_ON_CLOSE
@@ -181,9 +205,14 @@
                                   (do
                                     (println "Exception occured.")
                                     (. @exception printStackTrace)))
-                              (let [tabs-info (config/get-prop :tabs :info)]
+                              (let [tabs-info (config/get-prop :tabs :info)
+                                    index     (config/get-prop :tabs :index)]
                                 (doseq [info tabs-info]
-                                  (editor/file-set tabs (File. (info :id))))))
+                                  (let [generator (find-var (info :generator))
+                                        app       (apply generator [tabs])]
+                                    (. tabs addTab nil app)
+                                    (. app open (info :id))))
+                                (. tabs setSelectedIndex index)))
                             (windowClosing [evt]
                               (if (= '() (get-confirm-to-close-tabs tabs))
                                   (do

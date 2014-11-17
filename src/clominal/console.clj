@@ -40,40 +40,44 @@
 (def console-maps (keys/make-keymaps (JTextArea.) JComponent/WHEN_FOCUSED))
 
 (defn make-console
-  []
-  (let [is-marked    (atom false)
-        out          (atom nil)
-        console      (proxy [JTextArea IMarkable clominal.keys.IKeybindComponent] []
-                       (isMark [] @is-marked)
-                       (setMark [marked]
-                         (reset! is-marked marked))
-                       (setInputMap [inputmap] (. this setInputMap JComponent/WHEN_FOCUSED inputmap))
-                       (setActionMap [actionmap] (proxy-super setActionMap actionmap)))
-        root         (proxy [JScrollPane IOutputComponent] [console]
-                       (requestFocusInWindow []
-                         (. console requestFocusInWindow))
-                       (getOut []
-                         (if (nil? @out)
-                             (reset! out (make-output-stream-with this)))
-                         @out)
-                       (setToSystemOut []
-                         (System/setOut (PrintStream. (. this getOut))))
-                       (setToSystemErr []
-                         (System/setErr (PrintStream. (. this getOut))))
-                       (flush []
-                         ; (SwingUtilities/invokeLater
-                         ;   #(do
-                         ;     (. console append (. @out toString))
-                         ;     (. @out reset)))
-                         (do
-                           (. console append (. @out toString))
-                           (. @out reset))))
+  [tabs]
+  (let [is-marked   (atom false)
+        out         (atom nil)
+        console     (proxy [JTextArea IMarkable clominal.keys.IKeybindComponent] []
+                      (isMark [] @is-marked)
+                      (setMark [marked]
+                        (reset! is-marked marked))
+                      (setInputMap [inputmap] (. this setInputMap JComponent/WHEN_FOCUSED inputmap))
+                      (setActionMap [actionmap] (proxy-super setActionMap actionmap)))
+        root        (proxy [JScrollPane IAppPane IOutputComponent] [console]
+                      (canClose [] true)
+                      (getTabs [] tabs)
+                      (getTabIndex [] (. tabs indexOfComponent this))
+                      (getInfo []
+                        { :generator 'clominal.console/make-console :id nil })
+                      (open [id] nil)
+                      (requestFocusInWindow []
+                        (. console requestFocusInWindow))
+                      (getOut []
+                        (if (nil? @out)
+                            (reset! out (make-output-stream-with this)))
+                        @out)
+                      (setToSystemOut []
+                        (System/setOut (PrintStream. (. this getOut))))
+                      (setToSystemErr []
+                        (System/setErr (PrintStream. (. this getOut))))
+                      (flush []
+                        ; (SwingUtilities/invokeLater
+                        ;   #(do
+                        ;     (. console append (. @out toString))
+                        ;     (. @out reset)))
+                        (do
+                          (. console append (. @out toString))
+                          (. @out reset))))
         ;
         ; Others
         ;
-        default-map       (. console-maps get "default")
-        default-fonts     {:linux   ["YOzFontCF" Font/PLAIN 16]
-                           :windows ["ＭＳ ゴシック" Font/PLAIN 14]}
+        default-map (. console-maps get "default")
         ]
     ;
     ; Console
