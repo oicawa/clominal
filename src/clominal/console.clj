@@ -56,6 +56,8 @@
                       (getInfo []
                         { :generator 'clominal.console/make-console :id nil })
                       (open [id] nil)
+                      (close []
+                        (.. tabs (remove this)))
                       (requestFocusInWindow []
                         (. console requestFocusInWindow))
                       (getOut []
