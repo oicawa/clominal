@@ -147,7 +147,7 @@
                          (let [tab (doto (make-tab this)
                                      (.addCloseButtonListener
                                        (fn [e]
-                                         (. this removeTabAt (. this indexOfComponent content))))
+                                         (.. content close)))
                                      (.setTitle title))]
                            (. this setTabComponentAt (- (. this getTabCount) 1) tab)))
                        (setTitleAt [index title]
