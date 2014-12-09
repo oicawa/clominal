@@ -162,8 +162,7 @@
                                                   "This document is modified.\nDo you save?")]
         (cond (= option JOptionPane/YES_OPTION)
                 (do 
-                  (if ;(= nil (. text-pane getFileFullPath))
-                      (. text-pane isNew)
+                  (if (. text-pane isNew)
                       (save-as-document text-pane)
                       (save-document text-pane))
                   (.. text-pane getRoot getTabs (remove (. text-pane getRoot))))
