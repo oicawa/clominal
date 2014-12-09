@@ -142,6 +142,37 @@
     (. text-pane load file-location (. text-pane getEncoding))
     ))
 
+(defn save-document
+  [text-pane]
+  (. text-pane save))
+
+(defn save-as-document
+  [text-pane]
+  (let [chooser (JFileChooser. (str "~" os-file-separator))
+        result  (. chooser showSaveDialog nil)]
+    (if (= JFileChooser/APPROVE_OPTION result)
+        (doto text-pane
+          (.saveAs (FileLocation/create (.. chooser getSelectedFile getAbsolutePath)))
+          (.setDirty false)))))
+
+(defn close-file
+  [text-pane]
+  (if (. text-pane isDirty)
+      (let [option (JOptionPane/showConfirmDialog (.. text-pane getRoot getTabs)
+                                                  "This document is modified.\nDo you save?")]
+        (cond (= option JOptionPane/YES_OPTION)
+                (do 
+                  (if ;(= nil (. text-pane getFileFullPath))
+                      (. text-pane isNew)
+                      (save-as-document text-pane)
+                      (save-document text-pane))
+                  (.. text-pane getRoot getTabs (remove (. text-pane getRoot))))
+              (= option JOptionPane/NO_OPTION)
+                (.. text-pane getRoot getTabs (remove (. text-pane getRoot)))
+              :else
+                nil))
+      (.. text-pane getRoot getTabs (remove (. text-pane getRoot)))))
+
 ;
 ; Text Editor
 ;
@@ -275,6 +306,7 @@
                          (getTabIndex [] (. tabs indexOfComponent this))
                          (getInfo [] { :generator 'clominal.editors.editor/make-editor :id (. @text-pane getFileFullPath) })
                          (open [id] (. this load (File. id)))
+                         (close [] (close-file @text-pane))
                          (load [file]
                            (let [index (. this getTabIndex)]
                              (. tabs setSelectedIndex index)
@@ -535,19 +567,6 @@
 ;; File action group.
 ;;
 
-(defn save-document
-  [text-pane]
-  (. text-pane save))
-
-(defn save-as-document
-  [text-pane]
-  (let [chooser (JFileChooser. (str "~" os-file-separator))
-        result  (. chooser showSaveDialog nil)]
-    (if (= JFileChooser/APPROVE_OPTION result)
-        (doto text-pane
-          (.saveAs (FileLocation/create (.. chooser getSelectedFile getAbsolutePath)))
-          (.setDirty false)))))
-
 (defn file-set
   [tabs file]
   (let [editor (make-editor tabs)]
@@ -587,21 +606,7 @@
 
 (defaction close
   [text-pane]
-  (if (. text-pane isDirty)
-      (let [option (JOptionPane/showConfirmDialog (.. text-pane getRoot getTabs)
-                                                  "This document is modified.\nDo you save?")]
-        (cond (= option JOptionPane/YES_OPTION)
-                (do 
-                  (if ;(= nil (. text-pane getFileFullPath))
-                      (. text-pane isNew)
-                      (save-as-document text-pane)
-                      (save-document text-pane))
-                  (.. text-pane getRoot getTabs (remove (. text-pane getRoot))))
-              (= option JOptionPane/NO_OPTION)
-                (.. text-pane getRoot getTabs (remove (. text-pane getRoot)))
-              :else
-                nil))
-      (.. text-pane getRoot getTabs (remove (. text-pane getRoot)))))
+  (close-file text-pane))
                 
       
 (defaction select-tab [tabs]
