@@ -42,7 +42,8 @@
   (getTabs [])
   (getTabIndex [])
   (getInfo [])
-  (open [id]))
+  (open [id])
+  (close []))
 
 
 (defn add-component
