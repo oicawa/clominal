@@ -6,148 +6,79 @@
             ))
 
 ;;------------------------------
-;;
 ;; Custom key binds
-;;
 ;;------------------------------
-(def editor-keybind-settings
-  {
-   '(Ctrl h) editor/backward-char
-   '(Ctrl j) editor/next-line
-   '(Ctrl k) editor/previous-line
-   '(Ctrl l) editor/forward-char
+; Editor (Multi Line)
+(keys/defkeybinds [clominal.editors.editor/multi-line-maps]
+  (Ctrl h) clominal.editors.editor/backward-char
+  (Ctrl j) clominal.editors.editor/next-line
+  (Ctrl k) clominal.editors.editor/previous-line
+  (Ctrl l) clominal.editors.editor/forward-char
 
-   '(Alt h) editor/backward-word
-   '(Alt l) editor/forward-word
-   '(Alt Shift h) editor/begin-line
-   '(Alt Shift l) editor/end-line
+  (Alt h) clominal.editors.editor/backward-word
+  (Alt l) clominal.editors.editor/forward-word
+  (Alt Shift h) clominal.editors.editor/begin-line
+  (Alt Shift l) clominal.editors.editor/end-line
 
-   '(Alt j) editor/next-page
-   '(Alt k) editor/previous-page
-   '(Alt Shift j) editor/end-buffer
-   '(Alt Shift k) editor/begin-buffer
+  (Alt j) clominal.editors.editor/next-page
+  (Alt k) clominal.editors.editor/previous-page
+  (Alt Shift j) clominal.editors.editor/end-buffer
+  (Alt Shift k) clominal.editors.editor/begin-buffer
 
-   '(Ctrl b) editor/delete-previous-char
-   '(Ctrl d) editor/delete-next-char
+  (Ctrl b) clominal.editors.editor/delete-previous-char
+  (Ctrl d) clominal.editors.editor/delete-next-char
 
-   '(Ctrl c) editor/copy
-   '(Ctrl v) editor/paste
-   '(Ctrl x) editor/cut
-   '(Ctrl s) editor/file-save
-   '(Ctrl w) editor/close
-   '(Ctrl a) editor/selectAll
-   '(Ctrl z) editor/undo
-   '(Ctrl y) editor/redo
-   '(Ctrl p) editor/mark
-   '(Ctrl e) editor/escape
-   '(Ctrl g) editor/goto-line
-   '(Ctrl f) search/show-as-find
-   '(Ctrl r) search/show-as-replace
+  (Ctrl c) clominal.editors.editor/copy
+  (Ctrl v) clominal.editors.editor/paste
+  (Ctrl x) clominal.editors.editor/cut
+  (Ctrl s) clominal.editors.editor/file-save
+  (Ctrl w) clominal.editors.editor/close
+  (Ctrl a) clominal.editors.editor/selectAll
+  (Ctrl z) clominal.editors.editor/undo
+  (Ctrl y) clominal.editors.editor/redo
+  (Ctrl p) clominal.editors.editor/mark
+  (Ctrl e) clominal.editors.editor/escape
+  (Ctrl g) clominal.editors.editor/goto-line
+  (Ctrl f) clominal.editors.search/show-as-find
+  (Ctrl r) clominal.editors.search/show-as-replace
    
-   ;'(Alt i) editor/show-component-stack
-   '(Alt i) editor/show-system-encoding
+  ;(Alt i) clominal.editors.editor/show-component-stack
+  (Alt i) clominal.editors.editor/show-system-encoding
 
-   'F3         search/find-next
-   '(Shift F3) search/find-prev
-  })
+  F3         clominal.editors.search/find-next
+  (Shift F3) clominal.editors.search/find-prev)
 
-(doseq [setting editor-keybind-settings]
-  (let [keybind (setting 0)
-        action  (setting 1)]
-    (keys/define-keybind editor/multi-line-maps keybind action)))
+; Text Field (Single Line)
+(keys/defkeybinds [clominal.editors.editor/single-line-maps]
+  (Ctrl h) clominal.editors.editor/backward-char
+  (Ctrl l) clominal.editors.editor/forward-char
 
+  (Alt h) clominal.editors.editor/backward-word
+  (Alt l) clominal.editors.editor/forward-word
+  (Alt Shift h) clominal.editors.editor/begin-line
+  (Alt Shift l) clominal.editors.editor/end-line
 
-(def search-keybind-settings
-  {
-   '(Ctrl h) editor/backward-char
-   '(Ctrl l) editor/forward-char
+  (Ctrl b) clominal.editors.editor/delete-previous-char
+  (Ctrl d) clominal.editors.editor/delete-next-char
 
-   '(Alt h) editor/backward-word
-   '(Alt l) editor/forward-word
-   '(Alt Shift h) editor/begin-line
-   '(Alt Shift l) editor/end-line
+  (Ctrl c) clominal.editors.editor/copy
+  (Ctrl v) clominal.editors.editor/paste
+  (Ctrl x) clominal.editors.editor/cut
+  (Ctrl a) clominal.editors.editor/selectAll
+  (Ctrl z) clominal.editors.editor/undo
+  (Ctrl y) clominal.editors.editor/redo
+  (Ctrl p) clominal.editors.editor/mark
+  F3             clominal.editors.search/find-next-in-search-panel
+  (Shift F3)     clominal.editors.search/find-prev-in-search-panel
+  Return         clominal.editors.search/find-operate
+  (Ctrl e)       clominal.editors.search/hide
+  Esc            clominal.editors.search/hide)
 
-   '(Ctrl b) editor/delete-previous-char
-   '(Ctrl d) editor/delete-next-char
-
-   '(Ctrl c) editor/copy
-   '(Ctrl v) editor/paste
-   '(Ctrl x) editor/cut
-   '(Ctrl a) editor/selectAll
-   '(Ctrl z) editor/undo
-   '(Ctrl y) editor/redo
-   '(Ctrl p) editor/mark
-   'F3             search/find-next-in-search-panel
-   '(Shift F3)     search/find-prev-in-search-panel
-   'Return         search/find-operate
-   '(Ctrl e)       search/hide
-   'Esc            search/hide
-  })
-(doseq [setting search-keybind-settings]
-  (let [keybind (setting 0)
-        action  (setting 1)]
-    (keys/define-keybind editor/single-line-maps keybind action)))
-
-
-(def tool-keybind-settings
-  {
-   '(Ctrl h) editor/backward-char
-   '(Ctrl l) editor/forward-char
-
-   '(Alt h) editor/backward-word
-   '(Alt l) editor/forward-word
-   '(Alt Shift h) editor/begin-line
-   '(Alt Shift l) editor/end-line
-
-   '(Ctrl b) editor/delete-previous-char
-   '(Ctrl d) editor/delete-next-char
-
-   '(Ctrl c) editor/copy
-   '(Ctrl v) editor/paste
-   '(Ctrl x) editor/cut
-   '(Ctrl a) editor/selectAll
-   '(Ctrl z) editor/undo
-   '(Ctrl y) editor/redo
-   '(Ctrl p) editor/mark
-   'Return   search/find-operate
-   '(Ctrl e) search/hide
-  })
-(doseq [setting search-keybind-settings]
-  (let [keybind (setting 0)
-        action  (setting 1)]
-    (keys/define-keybind editor/single-line-maps keybind action)))
-
-
-(def frame-keybind-settings
-  {
-   '(Ctrl t) frame/show-tools
-   '(Ctrl n) editor/file-new
-   '(Ctrl o) editor/file-open
-   '(Ctrl Shift l) frame/load-module
-   ;'(Ctrl Shift \r) frame/load-module
-  })
-
-(doseq [setting frame-keybind-settings]
-  (let [keybind (setting 0)
-        action  (setting 1)]
-    (keys/define-keybind frame/maps keybind action)))
+; Frame
+(keys/defkeybinds [clominal.frame/maps]
+  (Ctrl t) clominal.frame/show-tools
+  (Ctrl n) clominal.editors.editor/file-new
+  (Ctrl o) clominal.editors.editor/file-open
+  (Ctrl Shift l) clominal.frame/load-module)
 
 (def ^{:dynamic true} *config* (atom nil))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
