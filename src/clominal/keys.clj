@@ -174,3 +174,18 @@
                   (. this-map  put stroke-name stroke (make-key-action stroke next-map))
                   (recur next-map (first strokes) (rest strokes))))))
         (. default-map put (str all-strokes) all-strokes (make-key-action operation default-map)))))
+
+(defmacro defkeybinds
+  [key-maps-list & body]
+  (assert (vector? key-maps-list))
+  (assert (even? (count body)))
+  `(loop [rest-body# '(~@body)]
+     (if (empty? rest-body#)
+         nil
+         (let [keybind# (first rest-body#)
+               action#  @(find-var (second rest-body#))]
+           (println "keybind:" keybind# ", action:" action#)
+           (do
+             (doseq [key-maps# ~key-maps-list]
+               (define-keybind key-maps# keybind# action#))
+             (recur (rest (rest rest-body#))))))))
