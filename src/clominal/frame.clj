@@ -212,7 +212,8 @@
                                         app       (apply generator [tabs])]
                                     (. tabs addTab nil app)
                                     (. app open (info :id))))
-                                (. tabs setSelectedIndex index)))
+                                (if (integer? index)
+                                    (. tabs setSelectedIndex index))))
                             (windowClosing [evt]
                               (if (= '() (get-confirm-to-close-tabs tabs))
                                   (do
