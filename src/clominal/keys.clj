@@ -184,7 +184,6 @@
          nil
          (let [keybind# (first rest-body#)
                action#  @(find-var (second rest-body#))]
-           (println "keybind:" keybind# ", action:" action#)
            (do
              (doseq [key-maps# ~key-maps-list]
                (define-keybind key-maps# keybind# action#))
