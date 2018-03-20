@@ -40,12 +40,9 @@
   (loop [prop       @*properties*
          target-key (first keys)
          rest-keys  (rest keys)]
-    (cond (not (empty? rest-keys))
-            (recur (prop target-key) (first rest-keys) (rest rest-keys))
-          (nil? prop)
-            nil
-          :else
-            (prop target-key))))
+    (if (empty? rest-keys)
+        (prop target-key)
+        (recur (prop target-key) (first rest-keys) (rest rest-keys)))))
 
 (defn set-prop
   [& params]

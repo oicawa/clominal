@@ -1,8 +1,9 @@
-(ns clominal.debug)
+(ns clominal.debug
+  (:require [clojure.pprint :as pprint]))
 
-(defn print
+(defn pprint
   [x]
   `(let [res# ~x]
-     ;(println "?=" (quote ~x))
-     (println "?=" res#)
+     (println "?=")
+     (pprint/pprint res#)
      res#))

@@ -1,4 +1,4 @@
-(System/setProperty "awt.useSystemAAFontSettings" "on")
+;(System/setProperty "awt.useSystemAAFontSettings" "on")
 (System/setProperty "UnicodeWriter.writeUtf8BOM" "false")
 (javax.swing.UIManager/setLookAndFeel "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
 

@@ -256,7 +256,12 @@
       (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_NONE)
       (.setSyntaxScheme (SyntaxScheme. default-font false))
       (.setTabSize 4)
-      (.setPaintTabLines true))
+      (.setPaintTabLines true)
+      (.setBackground Color/BLACK)
+      (.setForeground (Color. 200 200 200))
+      (.setFont default-font)
+      (.setCurrentLineHighlightColor (Color. 50 50 50))
+      )
 
     (doto (. @text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
