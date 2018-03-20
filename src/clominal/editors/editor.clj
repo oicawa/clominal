@@ -261,6 +261,7 @@
       (.setForeground (Color. 200 200 200))
       (.setFont default-font)
       (.setCurrentLineHighlightColor (Color. 50 50 50))
+      (.setSelectionColor (Color. 60 60 80))
       )
 
     (doto (. @text-pane getDocument)

@@ -159,7 +159,7 @@
 ;
 ; Font utilities
 ;
-(def default-font (Font. Font/MONOSPACED Font/PLAIN 14))
+(def default-font (Font. Font/MONOSPACED Font/PLAIN 16))
 
 (defn get-font-names
   []
