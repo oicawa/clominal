@@ -290,19 +290,21 @@
           
 (defn get-find-normal-positions
   [text-pane start end search-for match-case? whole-word?]
-  (loop [offset start
-         result '()]
-    (if (< end offset)
-        (reverse result)
-        (let [length        (+ (- end offset) 1)
-              search-in     (. text-pane getText offset length)
-              search-in-pos (SearchEngine/getNextMatchPos search-for search-in true match-case? whole-word?)]
-          (if (< search-in-pos 0)
-              (reverse result)
-              (let [total-start-pos   (+ offset search-in-pos)
-                    total-end-pos     (+ total-start-pos (count search-for))
-                    next-offset (+ total-start-pos 1)]
-                (recur next-offset (cons (Point. total-start-pos total-end-pos) result))))))))
+  (if (empty? search-for)
+      '()
+      (loop [offset start
+             result '()]
+        (if (< end offset)
+            (reverse result)
+            (let [length        (+ (- end offset) 1)
+                  search-in     (. text-pane getText offset length)
+                  search-in-pos (SearchEngine/getNextMatchPos search-for search-in true match-case? whole-word?)]
+              (if (< search-in-pos 0)
+                  (reverse result)
+                  (let [total-start-pos   (+ offset search-in-pos)
+                        total-end-pos     (+ total-start-pos (count search-for))
+                        next-offset (+ total-start-pos 1)]
+                    (recur next-offset (cons (Point. total-start-pos total-end-pos) result)))))))))
 
 (defn get-find-positions
   [search-panel & term]
