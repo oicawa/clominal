@@ -1,5 +1,6 @@
 (ns clominal.editors.editor
-  (:use [clominal.utils])
+  (:use [clominal.utils]
+        [clominal.debug])
   (:require [clominal.keys :as keys]
             [clojure.contrib.string :as string])
   (:import (java.lang Thread)
@@ -205,11 +206,17 @@
     ;
     ; Editor Area
     ;
-    (reset! text-pane (proxy [TextEditorPane ITextEditorPane IMarkable IKeybindComponent] []
+      (reset! text-pane (proxy [TextEditorPane ITextEditorPane IMarkable IKeybindComponent] []
                         (getRoot [] @root-panel)
                         (getUndoManager [] um)
                         (isNew [] @is-new)
                         (getKeyMaps [] multi-line-maps)
+                        (load [location encoding]
+                          (let [limit (. um getLimit)]
+                            (. um setLimit 0)
+                            ;(. um trimForLimit)
+                            (proxy-super load location encoding)
+                            (. um setLimit limit)))
                         (setDirty [dirty?]
                           (proxy-super setDirty dirty?)
                           (let [index    (. tabs getSelectedIndex)
