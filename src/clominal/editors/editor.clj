@@ -377,8 +377,6 @@
     @root-panel
     ))
 
-
-
 ;;------------------------------
 ;;
 ;; Editor actions
@@ -476,7 +474,7 @@
               view-rect   (.. text-pane getParent getViewRect)]
           (. rect setSize 10 (. view-rect height))
           (. text-pane scrollRectToVisible rect)
-          (. text-pane setCaretPosition (. element getStartOffset))))))
+          (. text-pane moveCaretPosition (. element getStartOffset))))))
 
 ;;
 ;; Delete action group.
@@ -531,14 +529,15 @@
   (. text-pane setMark false))
 
 (defaction paste [text-pane evt]
-  (. (get-default-editor-action (. text-pane getKeyMaps) DefaultEditorKit/pasteAction) actionPerformed evt))
+  (. (get-default-editor-action (. text-pane getKeyMaps) DefaultEditorKit/pasteAction) actionPerformed evt)
+  (. text-pane setMark false))
 
 
 ;;
 ;; Other group.
 ;;
 
-(defaction defactionaultKeyTyped [text-pane evt]
+(defaction defaultKeyTyped [text-pane evt]
   (. (get-default-editor-action (. text-pane getKeyMaps) DefaultEditorKit/defaultKeyTypedAction) actionPerformed evt))
 (defaction insertBreak [text-pane evt]
   (. (get-default-editor-action (. text-pane getKeyMaps) DefaultEditorKit/insertBreakAction) actionPerformed evt))

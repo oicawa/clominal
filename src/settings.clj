@@ -79,6 +79,7 @@
   (Ctrl t) clominal.frame/show-tools
   (Ctrl n) clominal.editors.editor/file-new
   (Ctrl o) clominal.editors.editor/file-open
-  (Ctrl Shift l) clominal.frame/load-module)
+  (Ctrl Shift l) clominal.frame/load-module
+  )
 
 (def ^{:dynamic true} *config* (atom nil))

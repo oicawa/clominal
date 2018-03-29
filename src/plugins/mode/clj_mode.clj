@@ -57,18 +57,7 @@
   (is-*-parenthesis? token false))
 
 (defn get-index-from-token-list
-  [text-pane
-   goForward
-   iStart
-   is-end?
-   nest
-   step
-   bracket
-   bracketMatch
-   curLine
-   doc
-   start
-   segment]
+  [text-pane goForward iStart is-end? nest step bracket bracketMatch curLine doc start segment]
   (loop [i     iStart
          token nil]
     (if (is-end? i segment)
@@ -241,7 +230,7 @@
         pos    (if-let [token (get-backward-s-expression text-pane offset)]
                  (. token offset)
                  offset)]
-    (. text-pane setCaretPosition pos)))
+    (. text-pane moveCaretPosition pos)))
 
 
 (defaction upward-s-expression [text-pane]
@@ -249,7 +238,7 @@
         pos    (if-let [token (get-upward-s-expression text-pane offset)]
                  (. token offset)
                  offset)]
-    (. text-pane setCaretPosition pos)))
+    (. text-pane moveCaretPosition pos)))
 
 
 (defaction forward-s-expression [text-pane]
@@ -257,14 +246,14 @@
         pos    (if-let [token (get-forward-s-expression text-pane offset)]
                  (+ (. token offset) (. token textCount))
                  offset)]
-    (. text-pane setCaretPosition pos)))
+    (. text-pane moveCaretPosition pos)))
 
 (defaction downward-s-expression [text-pane]
   (let [offset (. text-pane getCaretPosition)
         pos    (if-let [token (get-downward-s-expression text-pane offset)]
                  (. token offset)
                  offset)]
-    (. text-pane setCaretPosition pos)))
+    (. text-pane moveCaretPosition pos)))
 
 (defaction print-current-token-info [text-pane]
   (let [offset (. text-pane getCaretPosition)
