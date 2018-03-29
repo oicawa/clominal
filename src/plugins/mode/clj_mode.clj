@@ -230,7 +230,9 @@
         pos    (if-let [token (get-backward-s-expression text-pane offset)]
                  (. token offset)
                  offset)]
-    (. text-pane moveCaretPosition pos)))
+    (if (. text-pane isMark)
+        (. text-pane moveCaretPosition pos)
+        (. text-pane setCaretPosition pos))))
 
 
 (defaction upward-s-expression [text-pane]
@@ -238,7 +240,9 @@
         pos    (if-let [token (get-upward-s-expression text-pane offset)]
                  (. token offset)
                  offset)]
-    (. text-pane moveCaretPosition pos)))
+    (if (. text-pane isMark)
+        (. text-pane moveCaretPosition pos)
+        (. text-pane setCaretPosition pos))))
 
 
 (defaction forward-s-expression [text-pane]
@@ -246,14 +250,18 @@
         pos    (if-let [token (get-forward-s-expression text-pane offset)]
                  (+ (. token offset) (. token textCount))
                  offset)]
-    (. text-pane moveCaretPosition pos)))
+    (if (. text-pane isMark)
+        (. text-pane moveCaretPosition pos)
+        (. text-pane setCaretPosition pos))))
 
 (defaction downward-s-expression [text-pane]
   (let [offset (. text-pane getCaretPosition)
         pos    (if-let [token (get-downward-s-expression text-pane offset)]
                  (. token offset)
                  offset)]
-    (. text-pane moveCaretPosition pos)))
+    (if (. text-pane isMark)
+        (. text-pane moveCaretPosition pos)
+        (. text-pane setCaretPosition pos))))
 
 (defaction print-current-token-info [text-pane]
   (let [offset (. text-pane getCaretPosition)
