@@ -207,11 +207,12 @@
                                     (. @exception printStackTrace)))
                               (let [tabs-info (config/get-prop :tabs :info)
                                     index     (config/get-prop :tabs :index)]
-                                (doseq [info tabs-info]
-                                  (let [generator (find-var (info :generator))
-                                        app       (apply generator [tabs])]
-                                    (. tabs addTab nil app)
-                                    (. app open (info :id))))
+                                (when tabs-info
+                                      (doseq [info tabs-info]
+                                        (let [generator (find-var (info :generator))
+                                              app       (apply generator [tabs])]
+                                          (. tabs addTab nil app)
+                                          (. app open (info :id)))))
                                 (if (integer? index)
                                     (. tabs setSelectedIndex index))))
                             (windowClosing [evt]
