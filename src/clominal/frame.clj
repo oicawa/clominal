@@ -4,9 +4,11 @@
         [clominal.dialog])
   (:import (java.io File)
            (javax.swing JComponent JFrame JTabbedPane JTextArea JButton ImageIcon JPanel JTextField JList JLabel
-                        WindowConstants AbstractAction KeyStroke JOptionPane JScrollPane SwingUtilities BorderFactory)
+                        WindowConstants AbstractAction KeyStroke JOptionPane JScrollPane SwingUtilities BorderFactory
+                        TransferHandler)
            (javax.swing.event DocumentListener)
            (java.awt Toolkit Dimension GridBagLayout BorderLayout Font)
+           (java.awt.datatransfer DataFlavor)
            (java.awt.event InputEvent KeyEvent WindowAdapter ActionListener)
            (clominal.utils ITabbedPane IAppPane)
            )
@@ -91,6 +93,7 @@
   (setTitle [title])
   (getTitle [])
   (addCloseButtonListener [proc]))
+
 (defn- make-tab
   [tabs]
   (let [label  (doto (JLabel.)
@@ -98,7 +101,8 @@
         icon   (ImageIcon. "./resources/window-close.png")
         size   (Dimension. (. icon getIconWidth) (. icon getIconHeight))
         button (doto (JButton. icon)
-                 (.setPreferredSize size))
+                 (.setPreferredSize size)
+                 (.setFocusable false))
         tab    (proxy [JPanel ITabPanel] []
                  (setTitle [title]
                    (. label setText title))
@@ -117,6 +121,21 @@
       (.add label BorderLayout/WEST)
       (.add button BorderLayout/EAST)
       (.setBorder (BorderFactory/createEmptyBorder 2 1 1 1)))))
+
+
+(defn make-file-drop-handler
+  [tabs]
+  (proxy [TransferHandler] []
+    (canImport [support]
+      (and (. support isDrop)
+           (. support isDataFlavorSupported DataFlavor/javaFileListFlavor)))
+    (importData [support]
+      (if (. this canImport support)
+          (let [transferable (. support getTransferable)
+                files        (. transferable getTransferData DataFlavor/javaFileListFlavor)]
+            (doseq [file (seq files)]
+              (println file)
+              (editor/file-set tabs file)))))))
 
 (defn make-frame
   "Create clominal main frame."
@@ -194,6 +213,7 @@
                   (config/get-prop :frame :width)
                   (config/get-prop :frame :height))
       (.setLayout (GridBagLayout.))
+      (.setTransferHandler (make-file-drop-handler tabs))
       (grid-bag-layout
         :fill :BOTH
         :gridx 0 :gridy 0 :weightx 1.0 :weighty 1.0
@@ -232,6 +252,5 @@
                                           :else
                                             nil))))
                             (windowClosed [evt]
-                              (System/exit 0)))))
-    ))
+                              (System/exit 0)))))))
 

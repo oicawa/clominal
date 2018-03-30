@@ -12,7 +12,7 @@
            (javax.swing JList InputMap ActionMap JComponent Action BoxLayout
                         ; JTextPane JScrollPane
                         JLabel JTextField JPanel JCheckBox JOptionPane SwingConstants JFileChooser
-                        SwingUtilities AbstractAction JColorChooser)
+                        SwingUtilities AbstractAction JColorChooser TransferHandler)
            (javax.swing.border LineBorder MatteBorder EmptyBorder CompoundBorder)
            (javax.swing.event CaretListener DocumentListener)
            (javax.swing.text StyleConstants Utilities DefaultEditorKit DefaultHighlighter$DefaultHighlightPainter SimpleAttributeSet
@@ -269,6 +269,8 @@
       (.setFont default-font)
       (.setCurrentLineHighlightColor (Color. 50 50 50))
       (.setSelectionColor (Color. 60 60 80))
+      ;(.setTransferHandler (make-text-transfer-handler (. @text-pane getTransferHandler)))
+      (.setDropTarget nil)
       )
 
     (doto (. @text-pane getDocument)
