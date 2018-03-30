@@ -340,8 +340,7 @@
         caret-pos   (. text-pane getCaretPosition)
         judge       (if forward? < >)
         next-pos    (first (filter #(judge caret-pos %1) positions))]
-    (if (not (nil? next-pos))
-        (. text-pane setCaretPosition next-pos))))
+    (editor/move-caret-with-view-rect-by-offset text-pane next-pos)))
 
 (defaction find-operate
   [find-textbox]

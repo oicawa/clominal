@@ -460,21 +460,38 @@
 (defaction end-buffer [text-pane evt]
   (caret-action text-pane evt DefaultEditorKit/endAction DefaultEditorKit/selectionEndAction))
 
+(defn move-caret-with-view-rect-by-offset
+  [text-pane offset]
+  (if (integer? offset)
+      (let [view-rect  (.. text-pane getParent getViewRect)
+            rect       (. text-pane modelToView offset)
+            new-rect-y (let [half-height (/ (. view-rect height) 2)
+                             tmp-rect-y  (- (. rect getY) half-height)]
+                         (if (< tmp-rect-y 0.0) 0.0 tmp-rect-y))]
+        (. rect setSize 10 (. view-rect height))
+        (. rect setLocation (. rect getX) new-rect-y)
+        (. text-pane scrollRectToVisible rect)
+        (if (. text-pane isMark)
+            (. text-pane moveCaretPosition offset)
+            (. text-pane setCaretPosition offset)))))
+
+(defn move-caret-with-view-rect-by-line
+  [text-pane input-line]
+  (if (integer? input-line)
+      (let [root         (.. text-pane getDocument getDefaultRootElement)
+            cnt          (. root getElementCount)
+            correct-line (- (min input-line cnt) 1)
+            element      (. root getElement correct-line)
+            offset       (. element getStartOffset)]
+        (move-caret-with-view-rect-by-offset text-pane offset))))
+
 ;; Selected line
 (defaction goto-line [text-pane]
-  (let [input-line (JOptionPane/showInputDialog nil "Input line number.")]
-    (if (not (= nil input-line))
-        (let [root        (.. text-pane getDocument getDefaultRootElement)
-              cnt         (. root getElementCount)
-              input-value (Integer/parseInt (. input-line trim))
-              line        (- (min input-value cnt) 1)
-              element     (. root getElement line)
-              rect        (. text-pane modelToView (. element getStartOffset))
-              ;view-rect   (.. text-pane getRoot getScroll getViewport getViewRect)
-              view-rect   (.. text-pane getParent getViewRect)]
-          (. rect setSize 10 (. view-rect height))
-          (. text-pane scrollRectToVisible rect)
-          (. text-pane moveCaretPosition (. element getStartOffset))))))
+  (let [input-value (JOptionPane/showInputDialog nil "Input line number.")
+        input-line  (Integer/parseInt (. input-value trim))]
+    (if (integer? input-line)
+        (move-caret-with-view-rect-by-line text-pane input-line))))
+
 
 ;;
 ;; Delete action group.
