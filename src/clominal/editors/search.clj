@@ -508,7 +508,10 @@
               (setSelectionOnly [selection]
                 (. @selection-check setSelected selection))
               (getHighlightTags []
-                highlight-tags))
+                highlight-tags)
+              (setVisible [is_visible]
+                (. @find-textbox selectAll)
+                (proxy-super setVisible is_visible)))
         (.setLayout (GridBagLayout.))
         (.addComponentListener (proxy [ComponentListener] []
                                  (componentHidden [evt])
