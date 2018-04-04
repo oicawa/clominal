@@ -232,7 +232,7 @@
                                         (let [generator (find-var (info :generator))
                                               app       (apply generator [tabs])]
                                           (. tabs addTab nil app)
-                                          (. app open (info :id)))))
+                                          (. app open info))))
                                 (if (integer? index)
                                     (. tabs setSelectedIndex index))))
                             (windowClosing [evt]

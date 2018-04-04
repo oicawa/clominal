@@ -176,6 +176,7 @@
 ;
 ; Text Editor
 ;
+(declare move-caret-with-view-rect-by-offset)
 (defn make-editor
   [tabs]
   (let [;
@@ -318,8 +319,13 @@
                          (canClose [] (not (. @text-pane isDirty)))
                          (getTabs [] tabs)
                          (getTabIndex [] (. tabs indexOfComponent this))
-                         (getInfo [] { :generator 'clominal.editors.editor/make-editor :id (. @text-pane getFileFullPath) })
-                         (open [id] (. this load (File. id)))
+                         (getInfo [] {
+                           :generator 'clominal.editors.editor/make-editor
+                           :id        (. @text-pane getFileFullPath)
+                           :caret     (. @text-pane getCaretPosition)})
+                         (open [params]
+                           (. this load (File. (params :id)))
+                           (move-caret-with-view-rect-by-offset @text-pane (params :caret)))
                          (close [] (close-file @text-pane))
                          (load [file]
                            (let [index (. this getTabIndex)]
