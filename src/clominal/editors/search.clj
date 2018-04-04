@@ -327,7 +327,7 @@
         (get-find-regex-positions text-pane start end search-for match-case? whole-word?)
         (get-find-normal-positions text-pane start end search-for match-case? whole-word?))))
 
-(def matched-painter (DefaultHighlighter$DefaultHighlightPainter. Color/GRAY))
+(def matched-painter (DefaultHighlighter$DefaultHighlightPainter. (Color. 50 100 50)))
 
 (defn move-sbling-highlight-pos
   [search-panel forward?]
