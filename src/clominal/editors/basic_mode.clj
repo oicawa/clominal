@@ -318,10 +318,9 @@
         (keys/define-keybind editor/multi-line-maps keybind action))))
   (doto text-pane
     (.setSyntaxEditingStyle mode)
-    (.setEncoding "UTF-8"))
+    (.setEncoding "UTF-8")
+    (.setTabSize 2)
+    (.setTabsEmulated true))
   (apply-basic-mode-colors text-pane)
   (println (format "[%s] Load completed." mode-name)))
-
-
-
 
