@@ -91,33 +91,34 @@
 
 (definterface ITabPanel
   (setTitle [title])
-  (getTitle [])
-  (addCloseButtonListener [proc]))
+  (getTitle []))
 
 (defn- make-tab
-  [tabs]
+  [tabs title content]
   (let [label  (doto (JLabel.)
-                 (.setBorder (BorderFactory/createEmptyBorder 0 0 0 4)))
+                 (.setBorder (BorderFactory/createEmptyBorder 0 0 0 4))
+                 (.setFocusable false))
         icon   (ImageIcon. "./resources/window-close.png")
         size   (Dimension. (. icon getIconWidth) (. icon getIconHeight))
         button (doto (JButton. icon)
                  (.setPreferredSize size)
-                 (.setFocusable false))
+                 (.setFocusable false)
+                 (.addActionListener (proxy [ActionListener] []
+                                       (actionPerformed [e]
+                                         (. content close)))))
         tab    (proxy [JPanel ITabPanel] []
                  (setTitle [title]
                    (. label setText title))
                  (getTitle []
                    (. label getText))
-                 (addCloseButtonListener [proc]
-                   (doto button
-                     (.setPreferredSize size)
-                     (.addActionListener (proxy [ActionListener] []
-                                           (actionPerformed [e]
-                                             (proc e)))))))]
-    (. tabs setTabComponentAt (- (. tabs getTabCount) 1) tab)
+                 (setFocus []
+                   (. content setFocus)))]
+    (. content setFocus)
     (doto tab
       (.setLayout (BorderLayout.))
       (.setOpaque false)
+      (.setTitle title)
+      (.setFocusable false)
       (.add label BorderLayout/WEST)
       (.add button BorderLayout/EAST)
       (.setBorder (BorderFactory/createEmptyBorder 2 1 1 1)))))
@@ -163,11 +164,7 @@
                        (setKeyStroke [keystroke])
                        (addTab [title content]
                          (proxy-super addTab nil content)
-                         (let [tab (doto (make-tab this)
-                                     (.addCloseButtonListener
-                                       (fn [e]
-                                         (.. content close)))
-                                     (.setTitle title))]
+                         (let [tab (make-tab this title content)]
                            (. this setTabComponentAt (- (. this getTabCount) 1) tab)))
                        (setTitleAt [index title]
                          (let [tab (. this getTabComponentAt index)]
@@ -203,7 +200,8 @@
     (let [tabs-map (. maps get "default")]
       (doto tabs
         (.setTabPlacement JTabbedPane/TOP)
-        (.setTabLayoutPolicy JTabbedPane/SCROLL_TAB_LAYOUT)))
+        (.setTabLayoutPolicy JTabbedPane/SCROLL_TAB_LAYOUT)
+        (.setFocusable false)))
 
     (doto frame
       (.setTitle "clominal")
