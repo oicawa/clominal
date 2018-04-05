@@ -98,8 +98,11 @@
     (getSelectedText [attributes]
       (. original-imr getSelectedText attributes))
     (getTextLocation [offset]
-      (let [rect (. original-imr getTextLocation offset)]
-        (. rect setLocation (- (. rect x) 10) (- (. rect y) 45))
+      (let [rect   (. original-imr getTextLocation offset)
+            ;offset { :x 10 :y 45}
+            offset { :x 0 :y 0}
+            ]
+        (. rect setLocation (- (. rect x) (offset :x)) (- (. rect y) (offset :y)))
         rect))))
 
 (defn get-extension
@@ -270,9 +273,8 @@
       (.setFont default-font)
       (.setCurrentLineHighlightColor (Color. 50 50 50))
       (.setSelectionColor (Color. 50 50 100))
-      ;(.setTransferHandler (make-text-transfer-handler (. @text-pane getTransferHandler)))
       (.setDropTarget nil)
-      )
+      (.setCaretColor Color/YELLOW))
 
     (doto (. @text-pane getDocument)
       (.addDocumentListener (proxy [DocumentListener] []
@@ -334,8 +336,7 @@
                                  (. tabs setTitleAt index new-title)
                                  (do
                                    (reset! is-new false)
-                                   (open-file-with-editor-mode @text-pane file)
-                                   ))))
+                                   (open-file-with-editor-mode @text-pane file)))))
                          (setFocus []
                            (. tabs setSelectedIndex (. this getTabIndex))
                            (. @text-pane requestFocusInWindow))
@@ -347,36 +348,17 @@
                          (addSubPanel [nameSpace sub-panel]
                            (. sub-panel-root add sub-panel)
                            (. subpanels put nameSpace sub-panel))
-                         ; (showSubPanel [target-panel]
-                         ;   (doto sub-panel-root
-                         ;     (.removeAll)
-                         ;     (grid-bag-layout
-                         ;       :gridx 0 :gridy 0 :anchor :WEST :fill :HORIZONTAL :weightx 1.0
-                         ;       target-panel))
-                         ;   (. target-panel setVisible true)
-                         ;   (. target-panel setFocus)
-                         ;   (. sub-panel-root validate))
                          (getFileFullPath []
                            (. @text-pane getFileFullPath))))
     (doto @root-panel
       (.setLayout (GridBagLayout.))
       (.setName "root-panel")
       (grid-bag-layout
-        :fill :BOTH
-        :gridx 0
-        :gridy 0
-        :weightx 1.0
-        :weighty 1.0
+        :fill :BOTH :gridx 0 :gridy 0 :weightx 1.0 :weighty 1.0
         (RTextScrollPane. @text-pane)
-        :fill :HORIZONTAL
-        :weightx 1.0
-        :weighty 0.0
-        :gridy 1
+        :fill :HORIZONTAL :gridy 1 :weightx 1.0 :weighty 0.0
         sub-panel-root
-        :fill :HORIZONTAL
-        :weightx 1.0
-        :weighty 0.0
-        :gridy 2
+        :fill :HORIZONTAL :gridy 2 :weightx 1.0 :weighty 0.0
         statusbar))
     
     (. keystrokes setFont default-font)
