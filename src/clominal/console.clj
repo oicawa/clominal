@@ -50,15 +50,19 @@
                       (setInputMap [inputmap] (. this setInputMap JComponent/WHEN_FOCUSED inputmap))
                       (setActionMap [actionmap] (proxy-super setActionMap actionmap)))
         root        (proxy [JScrollPane IAppPane IOutputComponent] [console]
-                      (canClose [] true)
                       (getTabs [] tabs)
                       (getTabIndex [] (. tabs indexOfComponent this))
                       (getInfo []
                         { :generator 'clominal.console/make-console :id nil })
+                      (canOpen [params] true)
                       (open [id] nil)
+                      (canClose [] true)
                       (close []
                         (.. tabs (remove this)))
                       (requestFocusInWindow []
+                        (. console requestFocusInWindow))
+                      (setFocus []
+                        (. tabs setSelectedIndex (. this getTabIndex))
                         (. console requestFocusInWindow))
                       (getOut []
                         (if (nil? @out)

@@ -1,6 +1,8 @@
 (ns clominal.keys
   (:use [clojure.contrib.def]
-        [clominal.utils])
+        [clominal.utils]
+        [clominal.debug]
+        )
   (:import (javax.swing AbstractAction InputMap ActionMap JComponent KeyStroke SwingUtilities ComponentInputMap)
            (java.awt Toolkit)
            (java.awt.event InputEvent KeyEvent)
@@ -29,6 +31,7 @@
      (put [stroke-name stroke key-action]
        (. iptmap put stroke stroke-name)
        (. actmap put stroke-name key-action))))
+
 (defn make-keymap-with-component
   [component mode]
   (let [iptmap (if (= mode JComponent/WHEN_IN_FOCUSED_WINDOW)
@@ -134,8 +137,8 @@
                    (if (= nil last-key)
                        mask
                        (+ mask (mask-keys last-key))))
-          :else
-            (KeyStroke/getKeyStroke body))))
+          :else  ; atom?
+            (KeyStroke/getKeyStroke (normal-keys body) 0))))
 
 (defn get-key-strokes
   "
@@ -148,7 +151,7 @@
   [key-binds]
   (cond (symbol? key-binds) (KeyStroke/getKeyStroke (normal-keys key-binds) 0)
         (list? (first key-binds)) (map get-key-stroke key-binds)
-        true (get-key-stroke key-binds)))
+        :else (get-key-stroke key-binds)))
 
 
 (defn str-keystroke

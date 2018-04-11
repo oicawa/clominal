@@ -113,7 +113,6 @@
                    (. label getText))
                  (setFocus []
                    (. content setFocus)))]
-    (. content setFocus)
     (doto tab
       (.setLayout (BorderLayout.))
       (.setOpaque false)
@@ -229,10 +228,15 @@
                                       (doseq [info tabs-info]
                                         (let [generator (find-var (info :generator))
                                               app       (apply generator [tabs])]
-                                          (. tabs addTab nil app)
-                                          (. app open info))))
-                                (if (integer? index)
-                                    (. tabs setSelectedIndex index))))
+                                          (when (. app canOpen info)
+                                            (. tabs addTab nil app)
+                                            (. app open info)))))
+                                (let [tab-count    (. tabs getTabCount)
+                                      target-index (if (and (integer? index) (< index tab-count))
+                                                       index
+                                                       (- tab-count 1))]
+                                  (if (<= 0 target-index)
+                                      (. tabs setSelectedIndex target-index)))))
                             (windowClosing [evt]
                               (if (= '() (get-confirm-to-close-tabs tabs))
                                   (do

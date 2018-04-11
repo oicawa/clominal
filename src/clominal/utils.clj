@@ -1,5 +1,7 @@
 (ns clominal.utils
-  (:require [clojure.contrib.string :as string])
+  (:require [clojure.contrib.string :as string]
+            [clominal.debug :as debug]
+            )
   (:import (java.io File)
            (java.awt Font GraphicsEnvironment)
            (java.util HashMap)
@@ -43,6 +45,7 @@
   (getTabIndex [])
   (getInfo [])
   (open [id])
+  (canOpen [params])
   (close []))
 
 
@@ -192,9 +195,7 @@
                                (. ~evt getSource))
                               (catch Exception ~e
                                 (. ~e printStackTrace)
-                                ;(. System/err println (. ~e getMessage))
-                                (error ~e)
-                                ))))))
+                                (error ~e)))))))
           (let [evt (bindings 1)
                 e   (gensym "e")]
             `(def ~name (proxy [AbstractAction] []
@@ -204,6 +205,5 @@
                                (. ~evt getSource)
                                ~evt)
                               (catch Exception ~e
-                                ;(. ~e printStackTrace)
-                                (error ~e)
-                                ))))))))))
+                                (. ~e printStackTrace)
+                                (error ~e)))))))))))

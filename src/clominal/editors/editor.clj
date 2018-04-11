@@ -1,8 +1,9 @@
 (ns clominal.editors.editor
   (:use [clominal.utils]
         [clominal.debug])
-  (:require [clominal.keys :as keys]
-            [clojure.contrib.string :as string])
+  (:require [clojure.contrib.string :as string]
+            [clominal.keys :as keys]
+            [clominal.log :as log])
   (:import (java.lang Thread)
            (java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
            (java.awt.event ActionEvent)
@@ -210,7 +211,7 @@
     ;
     ; Editor Area
     ;
-      (reset! text-pane (proxy [TextEditorPane ITextEditorPane IMarkable IKeybindComponent] []
+    (reset! text-pane (proxy [TextEditorPane ITextEditorPane IMarkable IKeybindComponent] []
                         (getRoot [] @root-panel)
                         (getUndoManager [] um)
                         (isNew [] @is-new)
@@ -218,7 +219,6 @@
                         (load [location encoding]
                           (let [limit (. um getLimit)]
                             (. um setLimit 0)
-                            ;(. um trimForLimit)
                             (proxy-super load location encoding)
                             (. um setLimit limit)))
                         (setDirty [dirty?]
@@ -325,6 +325,12 @@
                            :generator 'clominal.editors.editor/make-editor
                            :id        (. @text-pane getFileFullPath)
                            :caret     (. @text-pane getCaretPosition)})
+                         (canOpen [params]
+                           (let [file   (File. (params :id))
+                                 result (. file exists)]
+                             (if (not result)
+                                 (log/warn "File does not exists. [%s]" (params :id)))
+                             result))
                          (open [params]
                            (. this load (File. (params :id)))
                            (move-caret-with-view-rect-by-offset @text-pane (params :caret)))
@@ -453,17 +459,20 @@
 (defn move-caret-with-view-rect-by-offset
   [text-pane offset]
   (if (integer? offset)
-      (let [view-rect  (.. text-pane getParent getViewRect)
-            rect       (. text-pane modelToView offset)
-            new-rect-y (let [half-height (/ (. view-rect height) 2)
+      (let [length      (.. text-pane (getDocument) (getLength))
+            real-offset (if (< length offset) length offset)
+            view-rect   (.. text-pane getParent getViewRect)
+            rect        (. text-pane modelToView real-offset)
+            new-rect-y  (let [half-height (/ (. view-rect height) 2)
                              tmp-rect-y  (- (. rect getY) half-height)]
                          (if (< tmp-rect-y 0.0) 0.0 tmp-rect-y))]
+        (if (<= length offset) (println (format "offset=%d, length%d, name=[%s]" offset length (. text-pane getFileName))))
         (. rect setSize 10 (. view-rect height))
         (. rect setLocation (. rect getX) new-rect-y)
         (. text-pane scrollRectToVisible rect)
         (if (. text-pane isMark)
-            (. text-pane moveCaretPosition offset)
-            (. text-pane setCaretPosition offset)))))
+            (. text-pane moveCaretPosition real-offset)
+            (. text-pane setCaretPosition real-offset)))))
 
 (defn move-caret-with-view-rect-by-line
   [text-pane input-line]
@@ -478,9 +487,13 @@
 ;; Selected line
 (defaction goto-line [text-pane]
   (let [input-value (JOptionPane/showInputDialog nil "Input line number.")
-        input-line  (Integer/parseInt (. input-value trim))]
-    (if (integer? input-line)
-        (move-caret-with-view-rect-by-line text-pane input-line))))
+        line-number (if (nil? input-value)
+                        -1
+                        (try
+                          (Integer/parseInt input-value)
+                          (catch NumberFormatException ex -1)))]
+    (if (<= 0 line-number)
+        (move-caret-with-view-rect-by-line text-pane line-number))))
 
 
 ;;
