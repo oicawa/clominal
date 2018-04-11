@@ -1,5 +1,7 @@
 (System/setProperty "UnicodeWriter.writeUtf8BOM" "false")
-;(javax.swing.UIManager/setLookAndFeel "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
+(javax.swing.UIManager/setLookAndFeel "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
+;;; The below class can
+;(javax.swing.UIManager/setLookAndFeel "javax.swing.plaf.nimbus.NimbusLookAndFeel")
 
 (ns clominal.core
   (:require [clominal.frame :as frame]
@@ -18,8 +20,6 @@
 
 (defn init
   []
-  (set! WebLookAndFeel/globalMenuFont default-font)
-  (WebLookAndFeel/install)
   (config/init))
 
 (defn -main [& args]
