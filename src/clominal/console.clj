@@ -1,6 +1,7 @@
 (ns clominal.console
   (:use [clojure.contrib.def]
         [clominal.utils])
+  (:require [clominal.config :as config])
   (:import (javax.swing JComponent JTextArea JScrollPane JPanel SwingUtilities)
            (java.io ByteArrayOutputStream PrintStream)
            (java.awt Font GridBagLayout)
@@ -93,7 +94,7 @@
       (.setInputMap  JComponent/WHEN_FOCUSED (. default-map getInputMap))
       (.setActionMap (. default-map getActionMap))
       (.setEditable true)
-      (.setFont default-font))
+      (.setFont (config/get-base-font)))
 
     (doto root
       ;(.setToSystemOut)

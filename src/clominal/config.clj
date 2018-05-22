@@ -1,8 +1,10 @@
 (ns clominal.config
   (:use [clominal.utils]
         [clojure.pprint :only (pprint)])
+  (:require [clominal.fonts :as fonts]
+            [clominal.log :as log])
   (:import [java.io File StringWriter]
-           [java.awt Toolkit]))
+           [java.awt Font Toolkit]))
 
 (def ^{:dynamic true :private true} *properties* (atom nil))
 
@@ -17,7 +19,7 @@
           (. file delete)
           (. file mkdir)))
     path))
-    
+
 (defn- get-properties-file-path
   [config-dir-path]
   (let [path (append-path config-dir-path "properties")
@@ -66,11 +68,29 @@
     (pprint @*properties* writer)
     (spit properties-path (. writer toString))))
 
+(defn get-base-font
+  []
+  (fonts/get-base-font
+    (get-prop :font :name)
+    (get-prop :font :size)))
+
 (defn init
   []
   (let [config-dir-path (get-config-dir-path)
         properties-path (get-properties-file-path config-dir-path)]
-    (reset! *properties* (read-string (slurp properties-path)))))
+    (reset! *properties* (read-string (slurp properties-path)))
+    ; Font
+    (let [font-name (get-prop :font :name)
+          font-size (get-prop :font :size)]
+      (log/info "font-name=[%s], font-size=%d" font-name font-size)
+      (if (nil? font-name)
+          (set-prop :font :name fonts/default-name))
+      (if (nil? font-size)
+          (set-prop :font :size fonts/default-size))
+      (if (or (nil? font-name) (nil? font-size))
+          (save-prop)
+          (reset! *properties* (read-string (slurp properties-path)))))))
+      
 
 
 

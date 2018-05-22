@@ -1,7 +1,6 @@
 (ns clominal.utils
   (:require [clojure.contrib.string :as string]
-            [clominal.debug :as debug]
-            )
+            [clominal.debug :as debug])
   (:import (java.io File)
            (java.awt Font GraphicsEnvironment)
            (java.util HashMap)
@@ -159,10 +158,6 @@
   [base-path added-path]
   (str base-path os-file-separator added-path))
 
-;
-; Font utilities
-;
-(def default-font (Font. Font/MONOSPACED Font/PLAIN 16))
 
 (defn get-font-names
   []

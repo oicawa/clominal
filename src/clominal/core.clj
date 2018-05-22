@@ -1,3 +1,5 @@
+(System/setProperty "awt.useSystemAAFontSettings" "on")
+(System/setProperty "swing.aatext" "true")
 (System/setProperty "UnicodeWriter.writeUtf8BOM" "false")
 (javax.swing.UIManager/setLookAndFeel "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
 ;;; The below class can
@@ -5,7 +7,8 @@
 
 (ns clominal.core
   (:require [clominal.frame :as frame]
-            [clominal.config :as config])
+            [clominal.config :as config]
+            [clominal.fonts :as fonts])
   (:use     [clominal.utils])
   (:import (java.io File)
            (javax.swing SwingUtilities)
@@ -20,6 +23,7 @@
 
 (defn init
   []
+  (fonts/init)
   (config/init))
 
 (defn -main [& args]

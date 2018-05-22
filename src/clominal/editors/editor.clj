@@ -3,6 +3,7 @@
         [clominal.debug])
   (:require [clojure.contrib.string :as string]
             [clominal.keys :as keys]
+            [clominal.config :as config]
             [clominal.log :as log])
   (:import (java.lang Thread)
            (java.awt Font Color Graphics GraphicsEnvironment GridBagLayout Point)
@@ -265,12 +266,12 @@
       (.setActionMap (. default-map getActionMap))
       (.enableInputMethods true)
       (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_NONE)
-      (.setSyntaxScheme (SyntaxScheme. default-font false))
+      (.setSyntaxScheme (SyntaxScheme. (config/get-base-font) false))
       (.setTabSize 4)
       (.setPaintTabLines true)
       (.setBackground Color/BLACK)
       (.setForeground (Color. 200 200 200))
-      (.setFont default-font)
+      (.setFont (config/get-base-font))
       (.setCurrentLineHighlightColor (Color. 50 50 50))
       (.setSelectionColor (Color. 50 50 100))
       (.setDropTarget nil)
@@ -367,8 +368,8 @@
         :fill :HORIZONTAL :gridy 2 :weightx 1.0 :weighty 0.0
         statusbar))
     
-    (. keystrokes setFont default-font)
-    (. char-code setFont default-font)
+    (. keystrokes setFont (config/get-base-font))
+    (. char-code setFont (config/get-base-font))
 
     @root-panel
     ))
