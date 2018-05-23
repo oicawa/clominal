@@ -1,5 +1,8 @@
-(System/setProperty "awt.useSystemAAFontSettings" "on")
-(System/setProperty "swing.aatext" "true")
+(def os-name (System/getProperty "os.name"))
+(println (format "OS Name: [%s]" os-name))
+(when (.. os-name (toLowerCase) (startsWith "linux"))
+  (System/setProperty "awt.useSystemAAFontSettings" "on")
+  (System/setProperty "swing.aatext" "true"))
 (System/setProperty "UnicodeWriter.writeUtf8BOM" "false")
 (javax.swing.UIManager/setLookAndFeel "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel")
 ;;; The below class can
